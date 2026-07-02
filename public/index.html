@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scentique — Blooming with Confidence</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── INDEX-SPECIFIC ── */
+    body { overflow-x: hidden; }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      min-height: 560px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("flower.jpeg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+    
+    .hero-flowers {
+  display: none;
+    }
+    /* Decorative flowers using CSS shapes + SVG-like backgrounds */
+    .hero-flowers {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Simulated flower vases via clip-path shapes */
+    .flower-group {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 62%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+    }
+
+    /* Individual decorative stems */
+    .fstem {
+      position: absolute;
+      bottom: 0;
+      transform-origin: bottom center;
+    }
+
+    /* Vase 1 — amber glass */
+    .vase-amber {
+      left: 4%;
+      bottom: 0;
+    }
+    .vase-amber .vase-body {
+      width: 60px; height: 90px;
+      background: linear-gradient(160deg, #f4b942, #e08830, #c96c10);
+      border-radius: 50% 50% 40% 40% / 30% 30% 50% 50%;
+      margin: 0 auto;
+      position: relative;
+      box-shadow: inset -8px 0 20px rgba(0,0,0,0.15);
+    }
+
+    /* Vase 2 — purple glass */
+    .vase-purple {
+      left: 22%;
+      bottom: 0;
+    }
+    .vase-purple .vase-body {
+      width: 70px; height: 130px;
+      background: linear-gradient(160deg, #b585c0, #9060a8, #6e3b84);
+      border-radius: 45% 45% 35% 35% / 20% 20% 50% 50%;
+      position: relative;
+      box-shadow: inset -10px 0 24px rgba(0,0,0,0.2);
+    }
+
+    /* Vase 3 — clear glass */
+    .vase-clear {
+      left: 38%;
+      bottom: 0;
+    }
+    .vase-clear .vase-body {
+      width: 80px; height: 150px;
+      background: linear-gradient(160deg, rgba(220,200,230,0.7), rgba(180,160,200,0.5));
+      border-radius: 40% 40% 30% 30% / 15% 15% 45% 45%;
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.4);
+      box-shadow: inset -12px 0 28px rgba(0,0,0,0.08);
+    }
+
+    /* Flower blooms */
+    .bloom {
+      position: absolute;
+      border-radius: 50%;
+    }
+
+    /* Pink rose cluster on amber vase */
+    .rose-cluster {
+      position: absolute;
+      bottom: 80px;
+      left: 0px;
+      width: 110px; height: 180px;
+    }
+    .rose-cluster .petal {
+      position: absolute;
+      border-radius: 50% 50% 50% 0;
+      transform-origin: bottom right;
+    }
+    .petal-1 { width:55px;height:55px; background:#e8a0b8; top:60px;left:10px; transform:rotate(-20deg); }
+    .petal-2 { width:60px;height:60px; background:#e090a8; top:30px;left:5px; transform:rotate(-50deg); }
+    .petal-3 { width:50px;height:50px; background:#d87898; top:50px;left:30px; transform:rotate(10deg); }
+    .petal-4 { width:45px;height:45px; background:#f0b0c0; top:20px;left:20px; transform:rotate(-80deg); }
+    .rose-center { position:absolute; width:28px;height:28px; background:#c06080; border-radius:50%; top:48px;left:22px; }
+
+    /* Pink gerbera on left */
+    .gerbera {
+      position: absolute;
+      bottom: 200px;
+      left: -15px;
+    }
+    .gerbera-petals {
+      position: relative;
+      width: 70px; height: 70px;
+    }
+    .gp { position:absolute; width:14px;height:30px; background:#e070a0; border-radius:50%; transform-origin: center bottom; left:28px; top:5px; }
+    .gp:nth-child(1){transform:rotate(0deg);} .gp:nth-child(2){transform:rotate(36deg);}
+    .gp:nth-child(3){transform:rotate(72deg);} .gp:nth-child(4){transform:rotate(108deg);}
+    .gp:nth-child(5){transform:rotate(144deg);} .gp:nth-child(6){transform:rotate(180deg);}
+    .gp:nth-child(7){transform:rotate(216deg);} .gp:nth-child(8){transform:rotate(252deg);}
+    .gp:nth-child(9){transform:rotate(288deg);} .gp:nth-child(10){transform:rotate(324deg);}
+    .gerbera-center { position:absolute; width:22px;height:22px; background:#c04070; border-radius:50%; top:24px;left:24px; z-index:1; }
+
+    /* Red alstroemeria */
+    .alstro-cluster {
+      position: absolute;
+      bottom: 120px;
+      left: 60px;
+      transform: rotate(-8deg);
+    }
+    .alstro-bloom {
+      position: relative;
+      width: 50px; height: 60px;
+      margin-bottom: -20px;
+    }
+    .ap { position:absolute; width:20px;height:32px; border-radius:50%; transform-origin:bottom center; }
+    .ap-1{background:#c84848;left:15px;top:0;transform:rotate(-30deg);}
+    .ap-2{background:#d06060;left:22px;top:5px;transform:rotate(20deg);}
+    .ap-3{background:#b83838;left:8px;top:5px;transform:rotate(-60deg);}
+    .ap-4{background:#c85858;left:20px;top:0;transform:rotate(50deg);}
+
+    /* Stem lines */
+    .stem-line {
+      position: absolute;
+      bottom: 0;
+      width: 3px;
+      background: #4a7a30;
+      border-radius: 2px;
+      transform-origin: bottom center;
+    }
+
+    /* Green leaves */
+    .leaf {
+      position: absolute;
+      width: 28px; height: 14px;
+      background: #5a8a38;
+      border-radius: 0 80% 0 80%;
+    }
+
+    /* Hero text block */
+    .hero-text {
+      position: absolute;
+      right: 6%;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 5;
+      text-align: left;
+      max-width: 420px;
+    }
+
+    .hero-eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 12px;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(52px, 7vw, 88px);
+      line-height: 1.0;
+      color: white;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .hero-title em {
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: rgba(255,255,255,0.88);
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    /* DEFINE SCENT SECTION */
+    .define-section {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 760px;
+      background: linear-gradient(120deg, #fff7fb 0%, #ffa3c5 54%, #f47cab 100%);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .define-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 90px 70px 150px;
+      position: relative;
+      z-index: 3;
+    }
+
+    .define-title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: clamp(42px, 5vw, 68px);
+      line-height: 1.05;
+      color: var(--black);
+      margin-bottom: 22px;
+      font-weight: 400;
+    }
+    .define-title em {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .define-desc {
+      font-size: 22px;
+      line-height: 1.35;
+      color: var(--black);
+      max-width: 430px;
+      margin-bottom: 42px;
+    }
+
+    .define-right {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 120px 70px 150px 0;
+      z-index: 3;
+    }
+
+    .bottle-card {
+      background-image: url("perfume.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 32px;
+      width: min(44vw, 580px);
+      min-width: 360px;
+      aspect-ratio: 0.92;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bottle-wrap {
+      display: none;
+    }
+
+    .define-brand-bg {
+      position: absolute;
+      left: 50%;
+      bottom: -46px;
+      transform: translateX(-50%);
+      z-index: 4;
+      pointer-events: none;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: clamp(88px, 14vw, 190px);
+      font-weight: 900;
+      letter-spacing: -8px;
+      line-height: 0.78;
+      color: rgba(255, 236, 244, 0.82);
+      white-space: nowrap;
+    }
+
+    /* FEATURES STRIP */
+    .features-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      background: var(--black);
+      padding: 40px 0;
+    }
+    .feature-item {
+      padding: 28px 40px;
+      border-right: 1px solid #222;
+      text-align: center;
+    }
+    .feature-item:last-child { border-right: none; }
+    .feature-icon { font-size: 28px; margin-bottom: 10px; }
+    .feature-title { color: white; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .feature-desc { color: #888; font-size: 12px; line-height: 1.5; }
+
+    /* TESTIMONIALS */
+    .testimonials-section {
+      padding: 80px 32px;
+      background: linear-gradient(180deg, #fce8f4, #f8d0e8);
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 4vw, 44px);
+      text-align: center;
+      margin-bottom: 48px;
+      color: var(--black);
+    }
+    .section-title em { font-style: italic; color: var(--pink-deep); }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .testimonial-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      box-shadow: var(--shadow);
+    }
+    .testimonial-name {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 8px;
+      color: var(--black);
+    }
+    .testimonial-text {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--grey);
+    }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .hero {
+        min-height: 620px;
+        align-items: center;
+      }
+      .hero-text {
+        right: auto;
+        left: 24px;
+        bottom: 70px;
+        max-width: min(330px, calc(100vw - 48px));
+      }
+      .hero-title { font-size: clamp(38px, 12vw, 54px); }
+      .define-section { grid-template-columns: 1fr; min-height: auto; }
+      .define-left { padding: 56px 24px 32px; }
+      .define-desc { font-size: 18px; }
+      .define-right { min-height: 460px; padding: 20px 24px 120px; }
+      .bottle-card { width: min(100%, 420px); min-width: 0; }
+      .define-brand-bg { bottom: -18px; letter-spacing: -4px; }
+      .features-strip { grid-template-columns: 1fr; }
+      .feature-item { border-right: none; border-bottom: 1px solid #222; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 460px) {
+      .hero {
+        min-height: 560px;
+      }
+
+      .hero-text {
+        bottom: 42px;
+      }
+
+      .hero-eyebrow {
+        font-size: 11px;
+      }
+
+      .define-title {
+        font-size: 42px;
+      }
+
+      .define-right {
+        min-height: 390px;
+      }
+
+      .define-brand-bg {
+        font-size: 82px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR (transparent over hero) -->
+<nav class="navbar light-text" id="mainNav">
+  <div class="nav-left">
+    <a href="shop.html">Shop</a>
+    <a href="shop.html?sale=1">Sale</a>
+  </div>
+  <a class="nav-logo" href="index.html">Scentique</a>
+  <div class="nav-right">
+    <button class="nav-search open-search" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);border-radius:20px;padding:6px 14px;color:white;display:flex;align-items:center;gap:8px;cursor:pointer;font-family:inherit;font-size:13px;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Search Perfume
+    </button>
+    <a href="account.html" class="nav-icon" title="Account">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    </a>
+    <a href="cart.html" class="nav-icon" title="Cart">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span class="cart-badge" id="cartBadge"></span>
+    </a>
+  </div>
+</nav>
+
+<!-- HERO SECTION -->
+<section class="hero">
+  <div class="hero-bg"></div>
+
+  <!-- Decorative flower arrangement (CSS-drawn) -->
+  <div class="hero-flowers" aria-hidden="true">
+
+    <!-- Left pink gerbera -->
+    <div class="fstem gerbera" style="left:3%;bottom:0;">
+      <div class="stem-line" style="height:220px;left:32px;bottom:0;position:absolute;transform:rotate(5deg);"></div>
+      <div class="leaf" style="bottom:140px;left:36px;transform:rotate(-40deg);"></div>
+      <div class="gerbera-petals" style="position:relative;">
+        <div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div>
+        <div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div>
+        <div class="gerbera-center"></div>
+      </div>
+    </div>
+
+    <!-- Rose cluster over amber vase -->
+    <div class="fstem vase-amber" style="left:6%;bottom:0;">
+      <div class="rose-cluster">
+        <div class="petal petal-1"></div>
+        <div class="petal petal-2"></div>
+        <div class="petal petal-3"></div>
+        <div class="petal petal-4"></div>
+        <div class="rose-center"></div>
+      </div>
+      <div class="stem-line" style="height:80px;left:28px;"></div>
+      <div class="vase-body"></div>
+    </div>
+
+    <!-- Alstroemeria over purple vase -->
+    <div class="fstem vase-purple" style="left:22%;">
+      <div style="position:absolute;bottom:130px;left:20px;">
+        <div class="alstro-bloom">
+          <div class="ap ap-1"></div><div class="ap ap-2"></div>
+          <div class="ap ap-3"></div><div class="ap ap-4"></div>
+        </div>
+        <div class="alstro-bloom" style="margin-top:15px;transform:rotate(20deg);">
+          <div class="ap ap-1"></div><div class="ap ap-2"></div>
+          <div class="ap ap-3"></div>
+        </div>
+      </div>
+      <div class="stem-line" style="height:130px;left:33px;transform:rotate(-4deg);"></div>
+      <div class="leaf" style="position:absolute;bottom:170px;left:36px;transform:rotate(-55deg);"></div>
+      <div class="vase-body"></div>
+    </div>
+
+    <!-- Clear vase with mixed blooms -->
+    <div class="fstem vase-clear" style="left:38%;">
+      <div style="position:absolute;bottom:150px;left:10px;">
+        <!-- Small pink blooms -->
+        <div style="position:relative;width:90px;height:120px;">
+          <div style="position:absolute;width:18px;height:18px;background:#f090b8;border-radius:50%;top:0;left:20px;"></div>
+          <div style="position:absolute;width:22px;height:22px;background:#e878a8;border-radius:50%;top:15px;left:45px;"></div>
+          <div style="position:absolute;width:16px;height:16px;background:#f0a0c0;border-radius:50%;top:5px;left:55px;"></div>
+          <div style="position:absolute;width:20px;height:20px;background:#e888b0;border-radius:50%;top:25px;left:10px;"></div>
+          <!-- green accent sprigs -->
+          <div style="position:absolute;width:2px;height:60px;background:#6a9848;bottom:0;left:38px;border-radius:2px;transform:rotate(-6deg);"></div>
+          <div style="position:absolute;width:2px;height:50px;background:#5a8838;bottom:0;left:50px;border-radius:2px;transform:rotate(10deg);"></div>
+          <div style="position:absolute;width:2px;height:70px;background:#6a9848;bottom:0;left:24px;border-radius:2px;transform:rotate(-15deg);"></div>
+        </div>
+      </div>
+      <div class="stem-line" style="height:150px;left:38px;transform:rotate(2deg);"></div>
+      <div class="vase-body"></div>
+    </div>
+
+  </div>
+
+  <!-- Hero text -->
+  <div class="hero-text">
+    <div class="hero-eyebrow">New Collection 2025</div>
+    <h1 class="hero-title">Blooming<br>with<br><em>Confidence</em></h1>
+    <p class="hero-sub">Whispering elegance, wearing confidence.</p>
+    <a href="shop.html" class="btn btn-primary" style="margin-top:28px;">Explore Collection</a>
+  </div>
+</section>
+
+<!-- DEFINE SCENT SECTION -->
+<section class="define-section">
+  <div class="define-left">
+    <h2 class="define-title">Define your<br><em>scent.</em></h2>
+    <p class="define-desc">From everyday joys to life's most meaningful moments, our scents help you say it beautifully.</p>
+    <a href="shop.html" class="btn btn-outline" style="width:fit-content;">Shop Now</a>
+  </div>
+  <div class="define-right">
+    <div class="bottle-card" aria-label="Pink floral perfume bottle"></div>
+  </div>
+  <div class="define-brand-bg" aria-hidden="true">Scentique</div>
+</section>
+
+<!-- FEATURES STRIP -->
+<div class="features-strip">
+  <div class="feature-item">
+    <div class="feature-icon">🚚</div>
+    <div class="feature-title">Free Shipping</div>
+    <div class="feature-desc">On all orders above RM150</div>
+  </div>
+  <div class="feature-item">
+    <div class="feature-icon">✨</div>
+    <div class="feature-title">Authentic Fragrances</div>
+    <div class="feature-desc">100% genuine, guaranteed</div>
+  </div>
+  <div class="feature-item">
+    <div class="feature-icon">↩️</div>
+    <div class="feature-title">Easy Returns</div>
+    <div class="feature-desc">7-day hassle-free returns</div>
+  </div>
+</div>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials-section">
+  <h2 class="section-title">Blooming with <em>brilliant</em> feedback</h2>
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="testimonial-name">Sarah L.</div>
+      <div class="stars">★★★★★</div>
+      <p class="testimonial-text">"My wedding fragrance was beyond perfect. Scentique captured exactly what I dreamed of."</p>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-name">Liam G.</div>
+      <div class="stars">★★★★★</div>
+      <p class="testimonial-text">"Their selection always makes my day. Fresh, beautiful, and delivered right on time."</p>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-name">Pat A.</div>
+      <div class="stars">★★★★★</div>
+      <p class="testimonial-text">"From ordering to delivery, everything was smooth. I'll never buy perfume anywhere else."</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h4>Customer Care</h4>
+      <p>Email: scentique@gmail.com</p>
+      <p>Contact: +82 6788 0091</p>
+    </div>
+    <div class="footer-col">
+      <h4>My Account</h4>
+      <a href="Login.html">Sign in</a>
+      <a href="Login.html?mode=register">Sign up</a>
+      <a href="account.html">My Account</a>
+    </div>
+  </div>
+  <div class="footer-logo-bg">Scentique</div>
+</footer>
+
+<!-- SEARCH OVERLAY -->
+<div class="search-overlay" id="searchOverlay">
+  <span class="search-close" id="searchClose">✕</span>
+  <input type="text" id="searchInput" placeholder="Search perfumes…" />
+</div>
+
+<script src="main.js"></script>
+<script>
+  // Navbar: solid after scroll past hero
+  initNavScroll(false);
+  window.addEventListener('scroll', () => {
+    const nav = document.getElementById('mainNav');
+    if (window.scrollY > 60) {
+      nav.classList.remove('light-text');
+      nav.classList.add('dark-text');
+    } else {
+      nav.classList.add('light-text');
+      nav.classList.remove('dark-text');
+    }
+  });
+</script>
+</body>
+</html>

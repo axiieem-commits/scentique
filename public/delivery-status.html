@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scentique - Delivery Status</title>
+  <link rel="stylesheet" href="Style.css" />
+  <style>
+    body {
+      background: #fff;
+      color: #111;
+      font-family: Arial, Helvetica, sans-serif;
+      min-height: 100vh;
+    }
+
+    .status-page {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 44px 28px 70px;
+    }
+
+    .status-logo {
+      display: block;
+      text-align: center;
+      color: #000;
+      text-decoration: none;
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      margin-bottom: 54px;
+    }
+
+    .status-heading {
+      max-width: 430px;
+      margin: 0 auto 18px;
+    }
+
+    .status-heading h1 {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.8px;
+    }
+
+    .status-heading p {
+      font-size: 17px;
+      margin-top: 3px;
+    }
+
+    .timeline-card {
+      max-width: 430px;
+      min-height: 560px;
+      margin: 0 auto;
+      border: 2px solid #777;
+      background: #fff;
+      padding: 34px 44px;
+      position: relative;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 74px;
+      position: relative;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 28px;
+      top: 52px;
+      bottom: 52px;
+      width: 1px;
+      background: #aaa;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      gap: 24px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-icon {
+      width: 58px;
+      height: 58px;
+      border: 1.5px solid #999;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #777;
+    }
+
+    .step.done .step-icon {
+      border: 3px solid #111;
+      color: #111;
+    }
+
+    .step.active .step-icon {
+      border-color: #d17bc5;
+      background: #f9edf7;
+      color: #ad4e9f;
+    }
+
+    .step-icon svg {
+      width: 31px;
+      height: 31px;
+    }
+
+    .step h2 {
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .step small {
+      display: block;
+      margin-top: 6px;
+      color: #777;
+      font-size: 13px;
+    }
+
+    .status-actions {
+      max-width: 430px;
+      margin: 24px auto 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .status-actions a {
+      height: 42px;
+      padding: 0 24px;
+      border: 1.5px solid #111;
+      border-radius: 999px;
+      color: #111;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+    }
+
+    .status-actions a.primary {
+      background: #d17bc5;
+      border-color: #d17bc5;
+      color: #fff;
+    }
+
+    .missing-order {
+      max-width: 430px;
+      margin: 0 auto;
+      border: 2px solid #777;
+      padding: 60px 32px;
+      text-align: center;
+      color: #777;
+    }
+
+    @media (max-width: 560px) {
+      .status-page {
+        padding: 32px 18px 46px;
+      }
+
+      .status-logo {
+        margin-bottom: 38px;
+      }
+
+      .timeline-card {
+        padding: 30px 24px;
+      }
+
+      .timeline {
+        gap: 58px;
+      }
+
+      .step {
+        grid-template-columns: 50px 1fr;
+        gap: 18px;
+      }
+
+      .step-icon {
+        width: 50px;
+        height: 50px;
+      }
+
+      .timeline::before {
+        left: 25px;
+      }
+
+      .status-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="status-page">
+    <a href="index.html" class="status-logo">Scentique</a>
+
+    <section id="statusContent">
+      <div class="missing-order">Loading delivery status...</div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get("order");
+
+    function getApiUrl(path) {
+      return window.location.protocol === "file:" ? `http://127.0.0.1:3000${path}` : path;
+    }
+
+    async function apiFetch(path, options) {
+      try {
+        return await fetch(getApiUrl(path), options);
+      } catch (error) {
+        if (window.location.protocol === "file:") {
+          return fetch(`http://localhost:3000${path}`, options);
+        }
+        throw error;
+      }
+    }
+
+    function normalizeOrder(order) {
+      return {
+        id: order.order_id || order.id,
+        user_id: order.user_id || order.userId || null,
+        date: order.order_date || order.date,
+        status: order.order_status || order.status || "Order Placed",
+        paid: Boolean(order.paid),
+        paymentProof: order.payment_proof || order.paymentProof || "",
+        items: order.items || []
+      };
+    }
+
+    function getCurrentUser() {
+      return JSON.parse(localStorage.getItem("scentique_session") || "null");
+    }
+
+    function getLocalOrders() {
+      const user = getCurrentUser();
+      return JSON.parse(localStorage.getItem("scentique_orders") || "[]")
+        .map(normalizeOrder)
+        .filter(order => !user?.id || !order.user_id || Number(order.user_id) === Number(user.id));
+    }
+
+    function mergeOrders(databaseOrders, localOrders) {
+      const merged = new Map();
+      localOrders.forEach(order => merged.set(String(order.id), order));
+      databaseOrders.forEach(order => merged.set(String(order.id), order));
+      return Array.from(merged.values());
+    }
+
+    function statusIndex(order) {
+      const status = String(order.status).toLowerCase();
+      if (status === "delivered") return 3;
+      if (status === "dispatched") return 2;
+      if (status.includes("process") || status.includes("pack")) return 1;
+      if (order.paid) return 0;
+      return -1;
+    }
+
+    function stepClass(index, current) {
+      if (index < current) return "done";
+      if (index === current) return "active";
+      return "";
+    }
+
+    function renderStatus(order) {
+      const current = statusIndex(order);
+      document.getElementById("statusContent").innerHTML = `
+        <div class="status-heading">
+          <h1>Delivery status</h1>
+          <p>Order ID : #${order.id}</p>
+        </div>
+
+        <section class="timeline-card">
+          <div class="timeline">
+            <article class="step ${stepClass(0, current)}">
+              <div class="step-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path d="M20 6 9 17l-5-5"></path>
+                </svg>
+              </div>
+              <div>
+                <h2>Payment approved and package is being packed</h2>
+                <small>${order.paid ? "Payment confirmed" : "Receipt uploaded, waiting for admin approval"}</small>
+              </div>
+            </article>
+
+            <article class="step ${stepClass(1, current)}">
+              <div class="step-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path d="M4 7h10v10H4z"></path>
+                  <path d="M14 11h3l3 3v3h-6z"></path>
+                  <circle cx="7" cy="18" r="1.8"></circle>
+                  <circle cx="17" cy="18" r="1.8"></circle>
+                </svg>
+              </div>
+              <h2>Package ready for delivery</h2>
+            </article>
+
+            <article class="step ${stepClass(2, current)}">
+              <div class="step-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path d="M5 16h9"></path>
+                  <path d="M3 12h10"></path>
+                  <path d="M6 8h8"></path>
+                  <path d="M15 9h3l3 4v3h-6z"></path>
+                  <circle cx="8" cy="18" r="2"></circle>
+                  <circle cx="18" cy="18" r="2"></circle>
+                </svg>
+              </div>
+              <h2>Out for delivery</h2>
+            </article>
+
+            <article class="step ${stepClass(3, current)}">
+              <div class="step-icon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path d="M4 5h16v14H4z"></path>
+                  <path d="m8 12 2.5 2.5L16 9"></path>
+                </svg>
+              </div>
+              <h2>Delivered</h2>
+            </article>
+          </div>
+        </section>
+
+        <div class="status-actions">
+          <a href="orders.html">All Orders</a>
+          <a class="primary" href="shop.html">Continue Shopping</a>
+        </div>
+      `;
+    }
+
+    async function loadOrder() {
+      const user = getCurrentUser();
+      if (!user || !user.id) {
+        window.location.href = `Login.html?next=${encodeURIComponent(`delivery-status.html?order=${orderId}`)}`;
+        return;
+      }
+
+      const localOrders = getLocalOrders();
+
+      try {
+        const response = await apiFetch(`/api/orders?user_id=${encodeURIComponent(user.id)}`);
+        if (!response.ok) throw new Error("Failed to load orders");
+        const data = await response.json();
+        const orders = mergeOrders(data.map(normalizeOrder), localOrders);
+        const order = orders.find(item => String(item.id) === String(orderId));
+        if (order) {
+          renderStatus(order);
+          return;
+        }
+      } catch (error) {
+        const order = localOrders.find(item => String(item.id) === String(orderId));
+        if (order) {
+          renderStatus(order);
+          return;
+        }
+      }
+
+      document.getElementById("statusContent").innerHTML = `
+        <div class="missing-order">
+          <h1>Order not found</h1>
+          <p>Please open delivery progress from your orders page.</p>
+          <br>
+          <a href="orders.html">Back to All Orders</a>
+        </div>
+      `;
+    }
+
+    loadOrder();
+  </script>
+</body>
+</html>

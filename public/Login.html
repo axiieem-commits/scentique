@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scentique — Sign In</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body {
+      background: var(--white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .auth-page {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 100vh;
+    }
+
+    /* LEFT — REAL IMAGE PANEL */
+    .auth-deco {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .auth-deco-bg {
+      position: absolute;
+      inset: 0;
+      background-image: url("flower2.jpeg"); 
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: 0;
+    }
+
+    /* Optional dark overlay supaya text Scentique nampak */
+    .auth-deco-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.12);
+    }
+
+    .deco-brand {
+      position: absolute;
+      bottom: 28px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(42px, 8vw, 80px);
+      font-weight: 700;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+    }
+
+    /* RIGHT — form panel */
+    .auth-form-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 64px 72px;
+      position: relative;
+    }
+
+    .auth-heading {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 8px;
+      color: var(--black);
+    }
+
+    .auth-sub {
+      font-size: 14px;
+      color: var(--grey);
+      margin-bottom: 36px;
+      line-height: 1.6;
+    }
+
+    .auth-switch {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--grey);
+    }
+
+    .auth-switch a {
+      color: var(--pink-deep);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .auth-switch a:hover {
+      text-decoration: underline;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--grey-light);
+      font-size: 12px;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .admin-link {
+      position: absolute;
+      bottom: 28px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--grey-light);
+    }
+
+    .admin-link a {
+      color: var(--grey);
+      text-decoration: none;
+    }
+
+    .admin-link a:hover {
+      color: var(--pink-deep);
+    }
+
+    /* Form tabs */
+    .form-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 32px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .form-tab {
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--grey);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all var(--transition);
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .form-tab.active {
+      color: var(--pink-deep);
+      border-bottom-color: var(--pink-deep);
+    }
+
+    .form-panel {
+      display: none;
+    }
+
+    .form-panel.active {
+      display: block;
+    }
+
+    /* Error message */
+    .auth-error {
+      background: #fce8f0;
+      color: var(--pink-deep);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    .auth-error.show {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .auth-page {
+        grid-template-columns: 1fr;
+      }
+
+      .auth-deco {
+        display: none;
+      }
+
+      .auth-form-panel {
+        padding: 80px 28px 48px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .auth-form-panel {
+        padding: 96px 18px 36px;
+      }
+
+      .form-tabs {
+        width: 100%;
+      }
+
+      .auth-heading {
+        font-size: 34px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Minimal navbar -->
+  <nav class="navbar solid dark-text" style="position:absolute;">
+    <div class="nav-left"></div>
+    <a class="nav-logo" href="index.html" style="color:var(--black);">Scentique</a>
+    <div class="nav-right"></div>
+  </nav>
+
+  <div class="auth-page">
+
+    <!-- LEFT IMAGE PANEL -->
+    <div class="auth-deco">
+      <div class="auth-deco-bg"></div>
+      <div class="deco-brand">Scentique</div>
+    </div>
+
+    <!-- RIGHT FORM PANEL -->
+    <div class="auth-form-panel">
+
+      <!-- Tab switcher -->
+      <div class="form-tabs">
+        <button class="form-tab active" id="tabLogin" onclick="switchTab('login')">Sign In</button>
+        <button class="form-tab" id="tabRegister" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div class="form-panel active" id="panelLogin">
+        <h1 class="auth-heading">Welcome<br>back!</h1>
+        <p class="auth-sub">Let's continue where you left off.</p>
+
+        <div class="auth-error" id="loginError"></div>
+
+        <div class="form-group">
+          <label for="loginUser">Username</label>
+          <input 
+            type="text" 
+            id="loginUser" 
+            class="form-control" 
+            placeholder="Your username or email" 
+            autocomplete="username" 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="loginPass">Password</label>
+          <input 
+            type="password" 
+            id="loginPass" 
+            class="form-control" 
+            placeholder="••••••••" 
+            autocomplete="current-password" 
+          />
+        </div>
+
+        <button class="btn btn-pink-full mt-16" onclick="doLogin()">Log In</button>
+
+        <div class="auth-switch">
+          New here?
+          <a href="#" onclick="switchTab('register'); return false;">Sign up here</a>
+        </div>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div class="form-panel" id="panelRegister">
+        <h1 class="auth-heading">Welcome!</h1>
+        <p class="auth-sub">Not sure what you need? We'll work it out together. Register with us.</p>
+
+        <div class="auth-error" id="registerError"></div>
+
+        <div class="form-group">
+          <label for="regUser">Username</label>
+          <input 
+            type="text" 
+            id="regUser" 
+            class="form-control" 
+            placeholder="Choose a username" 
+            autocomplete="username" 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">Enter your email</label>
+          <input 
+            type="email" 
+            id="regEmail" 
+            class="form-control" 
+            placeholder="you@example.com" 
+            autocomplete="email" 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="regPass">Password</label>
+          <input 
+            type="password" 
+            id="regPass" 
+            class="form-control" 
+            placeholder="Min. 6 characters" 
+            autocomplete="new-password" 
+          />
+        </div>
+
+        <button class="btn btn-pink-full mt-16" onclick="doRegister()">Create Account</button>
+
+        <div class="auth-switch">
+          Already have an account?
+          <a href="#" onclick="switchTab('login'); return false;">Sign in</a>
+        </div>
+      </div>
+
+      <div class="admin-link">
+        Admin? <a href="admin.html">Admin Log In →</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+
+  <script>
+    // Check URL param for mode
+    const params = new URLSearchParams(location.search);
+    if (params.get('mode') === 'register') switchTab('register');
+
+    // If already logged in with a database account, redirect
+    const existingSession = Auth.current();
+    if (existingSession && existingSession.id) {
+      const next = new URLSearchParams(location.search).get('next');
+      window.location.href = next || 'shop.html';
+    }
+
+    function switchTab(tab) {
+      document.getElementById('panelLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('panelRegister').classList.toggle('active', tab === 'register');
+      document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+    }
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 4000);
+    }
+
+    function getApiUrl(path) {
+      return window.location.protocol === 'file:' ? `http://127.0.0.1:3000${path}` : path;
+    }
+
+    async function apiFetch(path, options) {
+      try {
+        return await fetch(getApiUrl(path), options);
+      } catch (error) {
+        if (window.location.protocol === 'file:') {
+          return fetch(`http://localhost:3000${path}`, options);
+        }
+        throw error;
+      }
+    }
+
+    function redirectAfterLogin() {
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next');
+      window.location.href = next || 'shop.html';
+    }
+
+    async function doLogin() {
+      const user = document.getElementById('loginUser').value.trim();
+      const pass = document.getElementById('loginPass').value;
+
+      if (!user || !pass) {
+        showError('loginError', 'Please fill in all fields.');
+        return;
+      }
+
+      try {
+        const response = await apiFetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError('loginError', data.message || 'Invalid username or password.');
+          return;
+        }
+
+        localStorage.setItem('scentique_session', JSON.stringify(data.user));
+        Toast.show('Welcome back, ' + data.user.username + '! 🌸');
+        setTimeout(redirectAfterLogin, 800);
+      } catch (error) {
+        showError('loginError', 'Cannot connect to login database. Please run npm start.');
+      }
+    }
+
+    async function doRegister() {
+      const user = document.getElementById('regUser').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pass = document.getElementById('regPass').value;
+
+      if (!user || !email || !pass) {
+        showError('registerError', 'Please fill in all fields.');
+        return;
+      }
+
+      if (pass.length < 6) {
+        showError('registerError', 'Password must be at least 6 characters.');
+        return;
+      }
+
+      try {
+        const response = await apiFetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, email, password: pass })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError('registerError', data.message || 'Registration failed.');
+          return;
+        }
+
+        localStorage.setItem('scentique_session', JSON.stringify(data.user));
+        Toast.show('Account created! Welcome to Scentique 🌸');
+        setTimeout(redirectAfterLogin, 800);
+      } catch (error) {
+        showError('registerError', 'Cannot connect to register database. Please run npm start.');
+      }
+    }
+
+    // Enter key support
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (document.getElementById('panelLogin').classList.contains('active')) {
+          doLogin();
+        } else {
+          doRegister();
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scentique - Product Details</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      background: #fff;
+      color: #111;
+    }
+
+    .navbar {
+      height: 64px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-left a {
+      color: #111;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      letter-spacing: 0;
+    }
+
+    .nav-left a.active {
+      text-decoration: underline;
+    }
+
+    .nav-logo {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      color: #000;
+      text-decoration: none;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .nav-search {
+      width: auto;
+      height: auto;
+      border: 1px solid #6f7f8a;
+      border-radius: 20px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      color: #777;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .nav-search svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2;
+    }
+
+    .nav-search input {
+      border: none;
+      outline: none;
+      width: 120px;
+      font-size: 13px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .nav-icon {
+      color: #111;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+      position: relative;
+    }
+
+    .nav-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 1.8;
+    }
+
+    .cart-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      min-width: 17px;
+      height: 17px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #e05b8a;
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .cart-badge.show {
+      display: flex;
+    }
+
+    .breadcrumb {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 46px 30px 0;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      color: #7d4f45;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .breadcrumb a {
+      color: #7d4f45;
+      text-decoration: none;
+    }
+
+    .breadcrumb a.active {
+      text-decoration: underline;
+    }
+
+    .product-shell {
+      max-width: 1120px;
+      margin: 72px auto 70px;
+      padding: 0 30px;
+      display: grid;
+      grid-template-columns: 520px minmax(0, 1fr);
+      gap: 34px;
+      align-items: center;
+    }
+
+    .product-image-box {
+      width: 100%;
+      aspect-ratio: 1.08;
+      background: #e7e7e7;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 64px;
+    }
+
+    .product-image-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .product-panel {
+      padding-left: 4px;
+    }
+
+    .product-title {
+      font-size: 34px;
+      line-height: 1.05;
+      font-weight: 700;
+      text-transform: lowercase;
+      margin-bottom: 4px;
+    }
+
+    .product-type {
+      font-size: 32px;
+      line-height: 1.08;
+      margin-bottom: 34px;
+    }
+
+    .stars {
+      font-size: 30px;
+      color: #ffc229;
+      letter-spacing: 2px;
+      margin-bottom: 26px;
+      line-height: 1;
+    }
+
+    .stars .empty {
+      color: #ffc229;
+    }
+
+    .product-meta {
+      font-size: 33px;
+      line-height: 1.15;
+      margin-bottom: 48px;
+    }
+
+    .stock {
+      color: #05bd55;
+      font-size: 33px;
+      margin-bottom: 82px;
+    }
+
+    .stock.out {
+      color: #b62d2d;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 280px 280px;
+      gap: 34px;
+      align-items: center;
+    }
+
+    .qty-control {
+      height: 58px;
+      border: 2px solid #111;
+      border-radius: 999px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: center;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .qty-control button {
+      border: none;
+      background: transparent;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 32px;
+      line-height: 1;
+      cursor: pointer;
+      color: #111;
+    }
+
+    .qty-control span {
+      font-size: 35px;
+      font-weight: 700;
+    }
+
+    .btn-cart {
+      height: 58px;
+      border: 2px solid #111;
+      border-radius: 999px;
+      background: #fff;
+      color: #111;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .btn-cart:hover {
+      background: #f4f4f4;
+    }
+
+    .description-box {
+      max-width: 1120px;
+      margin: -20px auto 70px;
+      padding: 0 30px;
+    }
+
+    .description-box h2 {
+      font-size: 26px;
+      margin-bottom: 14px;
+    }
+
+    .description-box p {
+      max-width: 860px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #333;
+    }
+
+    .status-message {
+      max-width: 800px;
+      margin: 120px auto;
+      padding: 0 30px;
+      text-align: center;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 16px;
+    }
+
+    .search-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.97);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 30px;
+    }
+
+    .search-overlay.open {
+      display: flex;
+    }
+
+    .search-close {
+      position: absolute;
+      top: 28px;
+      right: 36px;
+      font-size: 30px;
+      cursor: pointer;
+    }
+
+    .search-overlay input {
+      width: 90%;
+      max-width: 560px;
+      font-size: 28px;
+      border: none;
+      border-bottom: 2px solid #111;
+      outline: none;
+      padding: 14px 0;
+      text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+      .product-shell {
+        grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1fr);
+        gap: 28px;
+      }
+
+      .product-image-box {
+        padding: 46px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+        max-width: 360px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .product-shell {
+        grid-template-columns: 1fr;
+        max-width: 680px;
+        margin-top: 46px;
+        align-items: start;
+      }
+
+      .actions {
+        grid-template-columns: 1fr 1fr;
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .navbar {
+        height: auto;
+        min-height: 104px;
+        padding: 16px 18px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        justify-items: center;
+      }
+
+      .nav-left {
+        gap: 16px;
+        order: 2;
+      }
+
+      .nav-logo {
+        position: static;
+        transform: none;
+        grid-column: 1 / -1;
+        justify-self: center;
+        font-size: 28px;
+        order: 1;
+      }
+
+      .nav-right {
+        order: 2;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .nav-search {
+        display: none;
+      }
+
+      .breadcrumb {
+        padding: 26px 18px 0;
+        flex-wrap: wrap;
+      }
+
+      .product-shell {
+        margin: 34px auto 46px;
+        padding: 0 18px;
+      }
+
+      .product-image-box {
+        padding: 40px;
+      }
+
+      .product-title,
+      .product-type,
+      .product-meta,
+      .stock {
+        font-size: clamp(24px, 7vw, 30px);
+      }
+
+      .stars { font-size: 25px; }
+
+      .stock {
+        margin-bottom: 42px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .description-box {
+        padding: 0 18px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .btn-cart {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="shop.html" class="active">Shop</a>
+      <a href="shop.html?sale=1">Sale</a>
+    </div>
+
+    <a href="index.html" class="nav-logo">Scentique</a>
+
+    <div class="nav-right">
+      <button class="nav-search" id="openSearch">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" placeholder="Search Perfume" readonly />
+      </button>
+
+      <a href="shop.html#ai-chat" class="nav-icon" title="AI chatbox">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M7 13H5a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3h-3l-4 4v-4Z"></path>
+          <path d="M16 8h3a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3h-1v3l-3-3h-4a3 3 0 0 1-3-3v-1"></path>
+        </svg>
+      </a>
+
+      <a href="account.html" class="nav-icon" title="Account">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
+        </svg>
+      </a>
+
+      <a href="cart.html" class="nav-icon" title="Cart">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <path d="M16 10a4 4 0 0 1-8 0"></path>
+        </svg>
+        <span class="cart-badge" aria-label="Cart item count"></span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="breadcrumb">
+    <a href="index.html">Home</a>
+    <span>/</span>
+    <a href="shop.html?cat=him" data-cat="him">For Him</a>
+    <span>/</span>
+    <a href="shop.html?cat=her" data-cat="her">For Her</a>
+  </div>
+
+  <main id="productRoot">
+    <p class="status-message">Loading perfume details...</p>
+  </main>
+
+  <div class="search-overlay" id="searchOverlay">
+    <span class="search-close" id="searchClose">x</span>
+    <input type="text" id="searchInput" placeholder="Search perfumes..." />
+  </div>
+
+  <script>
+    let currentProduct = null;
+    let quantity = 1;
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    async function apiFetch(path, options) {
+      if (window.location.protocol !== "file:") {
+        return fetch(path, options);
+      }
+
+      try {
+        return await fetch(`http://127.0.0.1:3000${path}`, options);
+      } catch (error) {
+        return fetch(`http://localhost:3000${path}`, options);
+      }
+    }
+
+    function renderStars(rating) {
+      const safeRating = Math.max(0, Math.min(5, Number(rating) || 5));
+      let stars = "";
+      for (let index = 1; index <= 5; index += 1) {
+        stars += index <= safeRating ? "★" : "☆";
+      }
+      return stars;
+    }
+
+    function getCartCount() {
+      const cart = JSON.parse(localStorage.getItem("scentique_cart") || "[]");
+      return cart.reduce((total, item) => total + Number(item.qty || item.quantity || 1), 0);
+    }
+
+    function syncCartBadge() {
+      const count = getCartCount();
+      document.querySelectorAll(".cart-badge").forEach(badge => {
+        badge.textContent = count > 99 ? "99+" : count;
+        badge.classList.toggle("show", count > 0);
+      });
+    }
+
+    function getCurrentUser() {
+      return JSON.parse(localStorage.getItem("scentique_session") || "null");
+    }
+
+    function requireCustomerLogin() {
+      if (localStorage.getItem("scentique_admin_session") === "active") {
+        alert("Admin accounts are only for managing orders and products. Please logout from admin before shopping.");
+        window.location.href = "admin.html";
+        return false;
+      }
+
+      const user = getCurrentUser();
+      if (user && user.id) return true;
+      alert("Please login first before adding perfume to cart.");
+      window.location.href = `Login.html?next=${encodeURIComponent(window.location.pathname.split("/").pop() + window.location.search)}`;
+      return false;
+    }
+
+    function getVolume(product) {
+      if (product.volume_ml) return `${product.volume_ml}ml`;
+      const match = String(product.type || "").match(/\(([^)]+)\)/);
+      return match ? match[1] : "50ml";
+    }
+
+    function getPerfumeType(product) {
+      return product.perfume_type || String(product.type || "Eau de Parfum").replace(/\s*\([^)]*\)/, "");
+    }
+
+    function productDescription(product) {
+      return product.description || `${product.name} is a ${getPerfumeType(product)} with a ${product.scent || "balanced"} scent profile, made for everyday confidence and memorable occasions.`;
+    }
+
+    function updateBreadcrumbActive(category) {
+      document.querySelectorAll(".breadcrumb a[data-cat]").forEach(link => {
+        link.classList.toggle("active", link.dataset.cat === category);
+      });
+    }
+
+    function renderProduct(product) {
+      currentProduct = product;
+      updateBreadcrumbActive(product.category);
+      const root = document.getElementById("productRoot");
+      const stock = Number(product.stock ?? 0);
+      const inStock = stock > 0;
+      const image = product.image || "https://via.placeholder.com/520x520?text=Scentique";
+      const price = Number(product.price || 0);
+
+      root.innerHTML = `
+        <section class="product-shell">
+          <div class="product-image-box">
+            <img src="${escapeHtml(image)}" alt="${escapeHtml(product.name || "Perfume")}" />
+          </div>
+
+          <div class="product-panel">
+            <h1 class="product-title">${escapeHtml(product.name || "Unnamed perfume")}</h1>
+            <div class="product-type">${escapeHtml(getPerfumeType(product))}</div>
+            <div class="stars" aria-label="${escapeHtml(product.rating || 5)} star rating">${renderStars(product.rating)}</div>
+            <div class="product-meta">
+              <div>${escapeHtml(getVolume(product))}</div>
+              <div>RM${escapeHtml(price)}</div>
+            </div>
+            <div class="stock ${inStock ? "" : "out"}">${inStock ? "In Stock" : "Out of Stock"}</div>
+
+            <div class="actions">
+              <div class="qty-control" aria-label="Quantity selector">
+                <button type="button" onclick="changeQuantity(-1)" aria-label="Decrease quantity">-</button>
+                <span id="qtyValue">1</span>
+                <button type="button" onclick="changeQuantity(1)" aria-label="Increase quantity">+</button>
+              </div>
+              <button class="btn-cart" type="button" onclick="addCurrentProductToCart()" ${inStock ? "" : "disabled"}>Add to cart</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="description-box">
+          <h2>Description</h2>
+          <p>${escapeHtml(productDescription(product))}</p>
+        </section>
+      `;
+    }
+
+    function changeQuantity(amount) {
+      quantity = Math.max(1, quantity + amount);
+      document.getElementById("qtyValue").textContent = quantity;
+    }
+
+    function addCurrentProductToCart() {
+      if (!currentProduct) return;
+      if (!requireCustomerLogin()) return;
+
+      const cart = JSON.parse(localStorage.getItem("scentique_cart") || "[]");
+      const existing = cart.find(item => String(item.id) === String(currentProduct.id));
+
+      if (existing) {
+        existing.qty = Number(existing.qty || existing.quantity || 0) + quantity;
+        existing.quantity = existing.qty;
+      } else {
+        cart.push({
+          id: currentProduct.id,
+          name: currentProduct.name,
+          type: currentProduct.type || `${getPerfumeType(currentProduct)} (${getVolume(currentProduct)})`,
+          price: currentProduct.price,
+          img: currentProduct.image,
+          qty: quantity,
+          quantity
+        });
+      }
+
+      localStorage.setItem("scentique_cart", JSON.stringify(cart));
+      syncCartBadge();
+      const button = document.querySelector(".btn-cart");
+      button.textContent = "Added ✓";
+      setTimeout(() => {
+        button.textContent = "Add to cart";
+      }, 1500);
+    }
+
+    async function loadProduct() {
+      const root = document.getElementById("productRoot");
+      const id = new URLSearchParams(window.location.search).get("id");
+
+      if (!id) {
+        root.innerHTML = `<p class="status-message">No perfume selected. Please choose a perfume from the shop page.</p>`;
+        return;
+      }
+
+      try {
+        const response = await apiFetch("/api/products");
+        if (!response.ok) throw new Error("Products could not be loaded.");
+        const products = await response.json();
+        const product = products.find(item => String(item.id) === String(id));
+
+        if (!product) {
+          root.innerHTML = `<p class="status-message">Perfume not found. It may have been removed from the shop.</p>`;
+          return;
+        }
+
+        renderProduct(product);
+      } catch (error) {
+        root.innerHTML = `<p class="status-message">Could not load this perfume. Please make sure npm start is running.</p>`;
+      }
+    }
+
+    const openSearch = document.getElementById("openSearch");
+    const searchOverlay = document.getElementById("searchOverlay");
+    const searchClose = document.getElementById("searchClose");
+    const searchInput = document.getElementById("searchInput");
+
+    openSearch.addEventListener("click", () => {
+      searchOverlay.classList.add("open");
+      searchInput.focus();
+    });
+
+    searchClose.addEventListener("click", () => {
+      searchOverlay.classList.remove("open");
+      searchInput.value = "";
+    });
+
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && searchInput.value.trim()) {
+        window.location.href = `shop.html?q=${encodeURIComponent(searchInput.value.trim())}`;
+      }
+    });
+
+    loadProduct();
+    syncCartBadge();
+  </script>
+</body>
+</html>

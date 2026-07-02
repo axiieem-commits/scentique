@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scentique - My Orders</title>
+  <link rel="stylesheet" href="Style.css" />
+  <style>
+    body {
+      background: #fafafa;
+      color: #111;
+      font-family: Arial, Helvetica, sans-serif;
+      min-height: 100vh;
+    }
+
+    .navbar.solid {
+      box-shadow: none;
+      background: #fff;
+    }
+
+    .navbar .nav-left a:first-child {
+      text-decoration: underline;
+    }
+
+    .navbar .nav-search {
+      border: 1.5px solid #68737a !important;
+      background: #fff !important;
+      color: #777 !important;
+    }
+
+    .navbar .nav-right .nav-icon,
+    .navbar .nav-right .nav-icon svg {
+      color: #000 !important;
+      stroke: #000 !important;
+    }
+
+    .orders-page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: calc(var(--nav-h) + 28px) 32px 70px;
+    }
+
+    .orders-title {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .orders-title h1 {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+    }
+
+    .orders-title a {
+      color: #7d4f45;
+      text-decoration: underline;
+      font-size: 15px;
+    }
+
+    .orders-tabs {
+      height: 58px;
+      background: #fff;
+      border: 1px solid #eee;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      margin-bottom: 16px;
+    }
+
+    .orders-tabs button {
+      border: 0;
+      border-bottom: 3px solid transparent;
+      background: transparent;
+      font-size: 17px;
+      font-weight: 800;
+      color: #444;
+      cursor: pointer;
+    }
+
+    .orders-tabs button.active {
+      color: #d17bc5;
+      border-bottom-color: #d17bc5;
+    }
+
+    .order-search {
+      height: 54px;
+      background: #f0f0f0;
+      border: 1px solid #ececec;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 22px;
+      margin-bottom: 18px;
+      color: #aaa;
+    }
+
+    .order-search svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .order-search input {
+      width: 100%;
+      border: 0;
+      outline: none;
+      background: transparent;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .orders-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .order-card {
+      background: #fff;
+      border: 1px solid #ececec;
+      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.035);
+    }
+
+    .order-card-head {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 24px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .order-id {
+      font-weight: 900;
+      font-size: 16px;
+    }
+
+    .order-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #22aa87;
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .order-body {
+      padding: 20px 24px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .order-item {
+      display: grid;
+      grid-template-columns: 92px 1fr auto;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .order-item img {
+      width: 92px;
+      height: 92px;
+      object-fit: contain;
+      background: #eee;
+      border-radius: 4px;
+      padding: 10px;
+    }
+
+    .order-item h2 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+      line-height: 1.15;
+      margin-bottom: 6px;
+      text-transform: lowercase;
+    }
+
+    .order-item p {
+      color: #777;
+      margin-bottom: 5px;
+    }
+
+    .item-price {
+      font-size: 18px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .order-card-foot {
+      padding: 18px 24px 22px;
+      border-top: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .order-total {
+      font-size: 17px;
+    }
+
+    .order-total strong {
+      color: #d17bc5;
+      font-size: 28px;
+      margin-left: 8px;
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .order-actions a,
+    .order-actions button {
+      min-width: 150px;
+      height: 42px;
+      border: 1.5px solid #ddd;
+      background: #fff;
+      color: #111;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .order-actions a.primary {
+      background: #d17bc5;
+      color: #fff;
+      border-color: #d17bc5;
+    }
+
+    .empty-state {
+      background: #fff;
+      border: 1px solid #eee;
+      text-align: center;
+      padding: 70px 24px;
+      color: #777;
+      font-size: 17px;
+    }
+
+    @media (max-width: 900px) {
+      .orders-page {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+
+      .orders-title {
+        align-items: flex-start;
+      }
+
+      .order-item {
+        grid-template-columns: 82px 1fr auto;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .orders-page {
+        padding: calc(var(--nav-h) + 22px) 18px 42px;
+      }
+
+      .orders-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .orders-tabs {
+        overflow-x: auto;
+        display: flex;
+      }
+
+      .orders-tabs button {
+        min-width: 128px;
+      }
+
+      .order-card-head,
+      .order-card-foot {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .order-item {
+        grid-template-columns: 78px 1fr;
+      }
+
+      .item-price {
+        grid-column: 2;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .orders-title h1 {
+        font-size: 28px;
+      }
+
+      .order-card-body,
+      .order-card-head,
+      .order-card-foot {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .order-actions {
+        width: 100%;
+        grid-template-columns: 1fr;
+      }
+
+      .order-actions a {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar solid dark-text">
+    <div class="nav-left">
+      <a href="shop.html">Shop</a>
+      <a href="shop.html?sale=1">Sale</a>
+    </div>
+
+    <a href="index.html" class="nav-logo">Scentique</a>
+
+    <div class="nav-right">
+      <button class="nav-search open-search">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <span>Search Perfume</span>
+      </button>
+
+      <a href="account.html" class="nav-icon" title="Account">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"></path>
+        </svg>
+      </a>
+
+      <a href="cart.html" class="nav-icon" title="Cart">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <path d="M16 10a4 4 0 0 1-8 0"></path>
+        </svg>
+        <span class="cart-badge"></span>
+      </a>
+    </div>
+  </nav>
+
+  <main class="orders-page">
+    <div class="orders-title">
+      <div>
+        <h1>My Orders</h1>
+        <p>Track your Scentique purchases and delivery progress.</p>
+      </div>
+      <a href="account.html">Back to My Account</a>
+    </div>
+
+    <div class="orders-tabs" id="orderTabs">
+      <button class="active" data-filter="all">All</button>
+      <button data-filter="pay">To Pay</button>
+      <button data-filter="ship">To Ship</button>
+      <button data-filter="receive">To Receive</button>
+      <button data-filter="completed">Completed</button>
+    </div>
+
+    <label class="order-search">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <input id="orderSearchInput" type="search" placeholder="Search by Order ID or product name" />
+    </label>
+
+    <section class="orders-list" id="ordersList">
+      <div class="empty-state">Loading orders...</div>
+    </section>
+  </main>
+
+  <div class="search-overlay" id="searchOverlay">
+    <span class="search-close" id="searchClose">x</span>
+    <input type="text" id="searchInput" placeholder="Search perfumes..." />
+  </div>
+
+  <script src="main.js"></script>
+  <script>
+    let ORDERS = [];
+    let currentFilter = "all";
+
+    function getApiUrl(path) {
+      return window.location.protocol === "file:" ? `http://127.0.0.1:3000${path}` : path;
+    }
+
+    async function apiFetch(path, options) {
+      try {
+        return await fetch(getApiUrl(path), options);
+      } catch (error) {
+        if (window.location.protocol === "file:") {
+          return fetch(`http://localhost:3000${path}`, options);
+        }
+        throw error;
+      }
+    }
+
+    function formatMoney(value) {
+      return `RM${Number(value || 0).toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function normalizeOrder(order) {
+      return {
+        id: order.order_id || order.id,
+        user_id: order.user_id || order.userId || null,
+        date: order.order_date || order.date,
+        customer: order.customer_name || order.customer || "",
+        status: order.order_status || order.status || "Order Placed",
+        paid: Boolean(order.paid),
+        paymentProof: order.payment_proof || order.paymentProof || "",
+        total: Number(order.total_amount || 0),
+        items: (order.items || []).map(item => ({
+          id: item.product_id || item.id,
+          name: item.product_name || item.name || "Perfume",
+          type: item.product_type || item.type || "",
+          qty: Number(item.quantity || item.qty || 1),
+          price: Number(item.price || 0),
+          image: item.product_image || item.img || item.image || ""
+        }))
+      };
+    }
+
+    function getLocalOrders() {
+      const user = Auth.current();
+      return JSON.parse(localStorage.getItem("scentique_orders") || "[]")
+        .map(normalizeOrder)
+        .filter(order => !user?.id || !order.user_id || Number(order.user_id) === Number(user.id));
+    }
+
+    function mergeOrders(databaseOrders, localOrders) {
+      const merged = new Map();
+      localOrders.forEach(order => merged.set(String(order.id), order));
+      databaseOrders.forEach(order => merged.set(String(order.id), order));
+      return Array.from(merged.values());
+    }
+
+    function statusFilter(order) {
+      const status = String(order.status).toLowerCase();
+      if (currentFilter === "pay") return !order.paid;
+      if (currentFilter === "ship") return order.paid && status !== "dispatched" && status !== "delivered";
+      if (currentFilter === "receive") return status === "dispatched";
+      if (currentFilter === "completed") return status === "delivered";
+      return true;
+    }
+
+    function statusLabel(order) {
+      const status = String(order.status).toLowerCase();
+      if (!order.paid && order.paymentProof) return "Receipt uploaded, awaiting admin approval";
+      if (!order.paid) return "Awaiting payment receipt";
+      if (status === "delivered") return "Parcel has been delivered";
+      if (status === "dispatched") return "Parcel is on the way";
+      return "Payment approved and package is being packed";
+    }
+
+    function renderOrders() {
+      const query = document.getElementById("orderSearchInput").value.trim().toLowerCase();
+      const list = ORDERS.filter(order => {
+        const searchable = `#${order.id} ${order.status} ${order.items.map(item => item.name).join(" ")}`.toLowerCase();
+        return statusFilter(order) && searchable.includes(query);
+      });
+
+      if (!list.length) {
+        document.getElementById("ordersList").innerHTML = `<div class="empty-state">No orders found.</div>`;
+        return;
+      }
+
+      document.getElementById("ordersList").innerHTML = list.map(order => {
+        const total = order.total || order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+        return `
+          <article class="order-card">
+            <header class="order-card-head">
+              <span class="order-id">Scentique Order #${order.id}</span>
+              <span class="order-status">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path d="M3 7h12v10H3z"></path>
+                  <path d="M15 11h3l3 3v3h-6z"></path>
+                  <circle cx="7" cy="18" r="2"></circle>
+                  <circle cx="18" cy="18" r="2"></circle>
+                </svg>
+                ${statusLabel(order)}
+              </span>
+            </header>
+
+            <div class="order-body">
+              ${order.items.map(item => `
+                <div class="order-item">
+                  <img src="${item.image || "https://via.placeholder.com/120x120?text=Scentique"}" alt="${item.name}">
+                  <div>
+                    <h2>${item.name}</h2>
+                    <p>${item.type}</p>
+                    <strong>x${item.qty}</strong>
+                  </div>
+                  <span class="item-price">${formatMoney(item.price * item.qty)}</span>
+                </div>
+              `).join("")}
+            </div>
+
+            <footer class="order-card-foot">
+              <span class="order-total">Order Total: <strong>${formatMoney(total)}</strong></span>
+              <div class="order-actions">
+                <a class="primary" href="delivery-status.html?order=${order.id}">View Progress</a>
+                <a href="shop.html">Buy Again</a>
+              </div>
+            </footer>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function loadOrders() {
+      const user = Auth.current();
+      if (!user || !user.id) {
+        window.location.href = `Login.html?next=${encodeURIComponent("orders.html")}`;
+        return;
+      }
+
+      const localOrders = getLocalOrders();
+      let apiFailed = false;
+
+      try {
+        const response = await apiFetch(`/api/orders?user_id=${encodeURIComponent(user.id)}`);
+        if (!response.ok) throw new Error("Failed to load orders");
+        const data = await response.json();
+        ORDERS = mergeOrders(data.map(normalizeOrder), localOrders);
+      } catch (error) {
+        apiFailed = true;
+        ORDERS = localOrders;
+      }
+
+      renderOrders();
+      if (apiFailed && !ORDERS.length) {
+        document.getElementById("ordersList").innerHTML = `
+          <div class="empty-state">No orders found. The backend API could not be reached, so start the server with npm start and open http://localhost:3000/orders.html.</div>
+        `;
+      }
+    }
+
+    document.getElementById("orderTabs").addEventListener("click", event => {
+      if (!event.target.matches("button")) return;
+      currentFilter = event.target.dataset.filter;
+      document.querySelectorAll(".orders-tabs button").forEach(button => button.classList.remove("active"));
+      event.target.classList.add("active");
+      renderOrders();
+    });
+
+    document.getElementById("orderSearchInput").addEventListener("input", renderOrders);
+
+    Cart.syncBadge();
+    loadOrders();
+  </script>
+</body>
+</html>
