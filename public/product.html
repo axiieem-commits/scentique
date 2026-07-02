@@ -282,6 +282,17 @@
       background: #f4f4f4;
     }
 
+    .btn-cart:disabled {
+      border-color: #c4c4c4;
+      background: #eeeeee;
+      color: #777;
+      cursor: not-allowed;
+    }
+
+    .btn-cart:disabled:hover {
+      background: #eeeeee;
+    }
+
     .description-box {
       max-width: 1120px;
       margin: -20px auto 70px;
@@ -606,6 +617,7 @@
 
     function renderProduct(product) {
       currentProduct = product;
+      quantity = 1;
       updateBreadcrumbActive(product.category);
       const root = document.getElementById("productRoot");
       const stock = Number(product.stock ?? 0);
@@ -627,15 +639,15 @@
               <div>${escapeHtml(getVolume(product))}</div>
               <div>RM${escapeHtml(price)}</div>
             </div>
-            <div class="stock ${inStock ? "" : "out"}">${inStock ? "In Stock" : "Out of Stock"}</div>
+            <div class="stock ${inStock ? "" : "out"}">${inStock ? `${stock} In Stock` : "Out of Stock"}</div>
 
             <div class="actions">
               <div class="qty-control" aria-label="Quantity selector">
-                <button type="button" onclick="changeQuantity(-1)" aria-label="Decrease quantity">-</button>
+                <button type="button" onclick="changeQuantity(-1)" aria-label="Decrease quantity" ${inStock ? "" : "disabled"}>-</button>
                 <span id="qtyValue">1</span>
-                <button type="button" onclick="changeQuantity(1)" aria-label="Increase quantity">+</button>
+                <button type="button" onclick="changeQuantity(1)" aria-label="Increase quantity" ${inStock ? "" : "disabled"}>+</button>
               </div>
-              <button class="btn-cart" type="button" onclick="addCurrentProductToCart()" ${inStock ? "" : "disabled"}>Add to cart</button>
+              <button class="btn-cart" type="button" onclick="addCurrentProductToCart()" ${inStock ? "" : "disabled"}>${inStock ? "Add to cart" : "Out of stock"}</button>
             </div>
           </div>
         </section>
@@ -648,7 +660,9 @@
     }
 
     function changeQuantity(amount) {
-      quantity = Math.max(1, quantity + amount);
+      const stock = Number(currentProduct?.stock ?? 0);
+      const maxQuantity = stock > 0 ? stock : 1;
+      quantity = Math.min(maxQuantity, Math.max(1, quantity + amount));
       document.getElementById("qtyValue").textContent = quantity;
     }
 
@@ -656,8 +670,21 @@
       if (!currentProduct) return;
       if (!requireCustomerLogin()) return;
 
+      const stock = Number(currentProduct.stock ?? 0);
+
+      if (stock <= 0) {
+        alert("Sorry, this perfume is out of stock.");
+        return;
+      }
+
       const cart = JSON.parse(localStorage.getItem("scentique_cart") || "[]");
       const existing = cart.find(item => String(item.id) === String(currentProduct.id));
+      const currentQty = existing ? Number(existing.qty || existing.quantity || 0) : 0;
+
+      if (currentQty + quantity > stock) {
+        alert(`Only ${stock} item(s) available in stock.`);
+        return;
+      }
 
       if (existing) {
         existing.qty = Number(existing.qty || existing.quantity || 0) + quantity;
