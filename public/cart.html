@@ -834,6 +834,7 @@
 <script src="main.js"></script>
 <script>
 let discount = 0;
+let appliedVoucher = null;
 let paymentProofData = "";
 let paymentProofLoading = false;
 let orderSubmitting = false;
@@ -956,20 +957,47 @@ function removeItem(id) {
   renderCart();
 }
 
-function applyVoucher() {
+async function applyVoucher() {
   const code = document.getElementById('voucherInput').value.trim().toUpperCase();
   const msg = document.getElementById('voucherMsg');
-  const VOUCHERS = { 'BLOOM10': 0.10, 'SCENTIQUE20': 0.20, 'WELCOME15': 0.15 };
-  if (VOUCHERS[code]) {
-    discount = VOUCHERS[code];
-    msg.textContent = `✓ Code applied! ${discount * 100}% off your order.`;
+  const user = requireCustomerLogin('Please login first before applying a voucher.');
+  if (!user) return;
+
+  try {
+    const response = await apiFetch('/api/vouchers/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.id,
+        voucher_code: code,
+        subtotal: Cart.total()
+      })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      appliedVoucher = null;
+      discount = 0;
+      msg.textContent = data.message || 'Invalid voucher code.';
+      msg.style.color = 'var(--pink-deep)';
+      msg.classList.add('show');
+      renderSummary();
+      return;
+    }
+
+    appliedVoucher = data;
+    discount = Number(data.discount_percentage || 0) / 100;
+    msg.textContent = `✓ ${data.voucher_code} applied! ${Number(data.discount_percentage)}% off your order.`;
     msg.style.color = '#2e7d4a';
     msg.classList.add('show');
     renderSummary();
-  } else {
-    msg.textContent = 'Invalid voucher code.';
+  } catch (error) {
+    appliedVoucher = null;
+    discount = 0;
+    msg.textContent = 'Could not validate voucher. Please try again.';
     msg.style.color = 'var(--pink-deep)';
     msg.classList.add('show');
+    renderSummary();
   }
 }
 
@@ -1107,6 +1135,7 @@ async function placeOrder() {
         city,
         state,
         total_amount: total,
+        voucher_code: appliedVoucher?.voucher_code || null,
         paid: false,
         payment_proof: paymentProofData,
         items: items.map(item => ({
@@ -1156,3 +1185,23 @@ async function placeOrder() {
       qty: Number(item.qty || item.quantity || 1)
     }))
   });
+  localStorage.setItem('scentique_orders', JSON.stringify(orders));
+  console.log('Saved Scentique order backup:', orders[0]);
+  // Clear cart and show success
+  Cart.save([]);
+  appliedVoucher = null;
+  discount = 0;
+  paymentProofData = '';
+  document.getElementById('checkoutForm').style.display = 'none';
+  document.getElementById('orderSuccess').classList.add('show');
+  Toast.show('Order placed successfully! 🌸', 'success');
+  renderCart();
+  orderSubmitting = false;
+  placeOrderBtn.disabled = false;
+  placeOrderBtn.textContent = 'Place Order';
+}
+
+renderCart();
+</script>
+</body>
+</html>
