@@ -85,6 +85,9 @@ async function initDatabase() {
       type VARCHAR(255) NOT NULL,
       description TEXT,
       price DECIMAL(10,2) NOT NULL,
+      original_price DECIMAL(10,2),
+      sale_price DECIMAL(10,2),
+      discount_percentage DECIMAL(5,2),
       stock INT DEFAULT 0,
       rating INT DEFAULT 5,
       image LONGTEXT NOT NULL,
@@ -188,9 +191,54 @@ async function initDatabase() {
   await addColumnIfMissing("products", "perfume_type VARCHAR(50) DEFAULT 'Eau de Parfum'");
   await addColumnIfMissing("products", "volume_ml INT DEFAULT 50");
   await addColumnIfMissing("products", "description TEXT");
+  await addColumnIfMissing("products", "original_price DECIMAL(10,2)");
+  await addColumnIfMissing("products", "sale_price DECIMAL(10,2)");
+  await addColumnIfMissing("products", "discount_percentage DECIMAL(5,2)");
   await addColumnIfMissing("orders", "tracking_number VARCHAR(100)");
   await ensureDefaultAdmin();
   console.log("Database tables are ready.");
+}
+
+function normalizeProductPricing(data) {
+  const sale = data.sale === true || data.sale === 1 || data.sale === "1" || data.sale === "true";
+  const regularPrice = Number(data.original_price || data.price || 0);
+  let salePrice = data.sale_price !== undefined && data.sale_price !== "" ? Number(data.sale_price) : null;
+  let discountPercentage = data.discount_percentage !== undefined && data.discount_percentage !== ""
+    ? Number(data.discount_percentage)
+    : null;
+
+  if (!sale) {
+    return {
+      sale: 0,
+      price: regularPrice,
+      originalPrice: regularPrice,
+      salePrice: null,
+      discountPercentage: null
+    };
+  }
+
+  if (salePrice === null && discountPercentage !== null && regularPrice > 0) {
+    salePrice = regularPrice * (1 - discountPercentage / 100);
+  }
+
+  if (discountPercentage === null && salePrice !== null && regularPrice > 0) {
+    discountPercentage = ((regularPrice - salePrice) / regularPrice) * 100;
+  }
+
+  if (salePrice === null) {
+    salePrice = regularPrice;
+  }
+
+  salePrice = Math.max(0, Number(salePrice.toFixed(2)));
+  discountPercentage = Math.max(0, Number((discountPercentage || 0).toFixed(2)));
+
+  return {
+    sale: 1,
+    price: salePrice,
+    originalPrice: regularPrice,
+    salePrice,
+    discountPercentage
+  };
 }
 
 // Test API
@@ -494,14 +542,18 @@ app.post("/api/products", async (req, res) => {
       type,
       description,
       price,
+      original_price,
+      sale_price,
+      discount_percentage,
       stock,
       rating,
       image,
       sale
     } = req.body;
     const productType = type || `${perfume_type || "Eau de Parfum"} (${Number(volume_ml) || 50}ml)`;
+    const pricing = normalizeProductPricing({ price, original_price, sale_price, discount_percentage, sale });
 
-    if (!name || !category || !productType || !price || !image) {
+    if (!name || !category || !productType || !pricing.price || !image) {
       return res.status(400).json({
         message: "Please fill in all required fields."
       });
@@ -509,8 +561,8 @@ app.post("/api/products", async (req, res) => {
 
     const sql = `
       INSERT INTO products 
-      (name, category, scent, perfume_type, volume_ml, type, description, price, stock, rating, image, sale)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (name, category, scent, perfume_type, volume_ml, type, description, price, original_price, sale_price, discount_percentage, stock, rating, image, sale)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
@@ -521,11 +573,14 @@ app.post("/api/products", async (req, res) => {
       Number(volume_ml) || 50,
       productType,
       description || null,
-      Number(price),
+      pricing.price,
+      pricing.originalPrice,
+      pricing.salePrice,
+      pricing.discountPercentage,
       Number(stock) || 0,
       Number(rating) || 5,
       image,
-      sale ? 1 : 0
+      pricing.sale
     ];
 
     const [result] = await db.query(sql, values);
@@ -542,11 +597,14 @@ app.post("/api/products", async (req, res) => {
         volume_ml: Number(volume_ml) || 50,
         type: productType,
         description: description || null,
-        price: Number(price),
+        price: pricing.price,
+        original_price: pricing.originalPrice,
+        sale_price: pricing.salePrice,
+        discount_percentage: pricing.discountPercentage,
         stock: Number(stock) || 0,
         rating: Number(rating) || 5,
         image,
-        sale: sale ? 1 : 0
+        sale: pricing.sale
       }
     });
   } catch (error) {
@@ -572,11 +630,23 @@ app.patch("/api/products/:id", async (req, res) => {
       type,
       description,
       price,
+      original_price,
+      sale_price,
+      discount_percentage,
       stock,
       rating,
       image,
       sale
     } = req.body;
+    const hasPricingUpdate =
+      price !== undefined ||
+      original_price !== undefined ||
+      sale_price !== undefined ||
+      discount_percentage !== undefined ||
+      sale !== undefined;
+    const pricing = hasPricingUpdate
+      ? normalizeProductPricing({ price, original_price, sale_price, discount_percentage, sale })
+      : null;
 
     const sql = `
       UPDATE products
@@ -589,6 +659,9 @@ app.patch("/api/products/:id", async (req, res) => {
         type = COALESCE(?, type),
         description = COALESCE(?, description),
         price = COALESCE(?, price),
+        original_price = COALESCE(?, original_price),
+        sale_price = CASE WHEN ? THEN ? ELSE sale_price END,
+        discount_percentage = CASE WHEN ? THEN ? ELSE discount_percentage END,
         stock = COALESCE(?, stock),
         rating = COALESCE(?, rating),
         image = COALESCE(?, image),
@@ -604,11 +677,16 @@ app.patch("/api/products/:id", async (req, res) => {
       volume_ml !== undefined ? Number(volume_ml) : null,
       type ?? null,
       description ?? null,
-      price !== undefined ? Number(price) : null,
+      pricing ? pricing.price : null,
+      pricing ? pricing.originalPrice : null,
+      hasPricingUpdate ? 1 : 0,
+      pricing ? pricing.salePrice : null,
+      hasPricingUpdate ? 1 : 0,
+      pricing ? pricing.discountPercentage : null,
       stock !== undefined ? Number(stock) : null,
       rating !== undefined ? Number(rating) : null,
       image ?? null,
-      sale !== undefined ? (sale ? 1 : 0) : null,
+      pricing ? pricing.sale : null,
       id
     ];
 
