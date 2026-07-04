@@ -539,6 +539,8 @@
   <div class="breadcrumb">
     <a href="index.html">Home</a>
     <span>/</span>
+    <a href="shop.html" data-cat="all">All</a>
+    <span>/</span>
     <a href="shop.html?cat=him" data-cat="him">For Him</a>
     <span>/</span>
     <a href="shop.html?cat=her" data-cat="her">For Her</a>
@@ -670,8 +672,9 @@
     }
 
     function updateBreadcrumbActive(category) {
+      const activeCategory = category === "unisex" ? "all" : category;
       document.querySelectorAll(".breadcrumb a[data-cat]").forEach(link => {
-        link.classList.toggle("active", link.dataset.cat === category);
+        link.classList.toggle("active", link.dataset.cat === activeCategory);
       });
     }
 
