@@ -1132,6 +1132,7 @@
     <nav class="admin-tabs" aria-label="Admin sections">
       <button class="tab-btn active" data-panel="dashboard">Dashboard</button>
       <button class="tab-btn" data-panel="products">Add Product</button>
+      <button class="tab-btn" data-panel="vouchers">Vouchers</button>
       <button class="tab-btn" data-panel="payments">Payment Approval</button>
       <button class="tab-btn" data-panel="orders">Order Summary</button>
     </nav>
@@ -1346,6 +1347,41 @@
       <div class="payment-approval-list" id="paymentApprovalList"></div>
     </section>
 
+    <section class="panel" id="vouchersPanel">
+      <h1 class="panel-title">Voucher Management</h1>
+      <div class="product-admin">
+        <div class="payment-approval-list" id="voucherList">Loading vouchers...</div>
+
+        <aside class="form-card">
+          <h2>Create Voucher</h2>
+          <form id="voucherForm" class="form-grid">
+            <label for="voucherCode">Voucher Code</label>
+            <input type="text" id="voucherCode" placeholder="FIRSTTIME15" maxlength="20" required />
+
+            <label for="voucherDiscount">Discount %</label>
+            <input type="number" id="voucherDiscount" placeholder="15" min="1" max="100" step="0.01" required />
+
+            <label for="voucherExpiry">Validity / Expiry Date</label>
+            <input type="date" id="voucherExpiry" required />
+
+            <label for="voucherMaxUsers">How Many Users Can Redeem</label>
+            <input type="number" id="voucherMaxUsers" placeholder="Leave blank for unlimited" min="1" />
+
+            <label for="voucherPerUser">Times Per User</label>
+            <input type="number" id="voucherPerUser" value="1" min="1" required />
+
+            <div class="checkbox-row">
+              <input type="checkbox" id="voucherFirstTime" />
+              <label for="voucherFirstTime">First-time users only</label>
+            </div>
+
+            <button type="submit" class="submit-btn">Create Voucher</button>
+            <p class="message" id="voucherMessage"></p>
+          </form>
+        </aside>
+      </div>
+    </section>
+
     <section class="panel" id="detailPanel">
       <div class="order-detail">
         <h1 class="order-detail-head">Scentique</h1>
@@ -1411,6 +1447,9 @@
     const orderSearch = document.getElementById("orderSearch");
     const paymentSearch = document.getElementById("paymentSearch");
     const paymentApprovalList = document.getElementById("paymentApprovalList");
+    const voucherForm = document.getElementById("voucherForm");
+    const voucherList = document.getElementById("voucherList");
+    const voucherMessage = document.getElementById("voucherMessage");
     const globalSearch = document.getElementById("globalSearch");
     const adminLogin = document.getElementById("adminLogin");
     const adminShell = document.getElementById("adminShell");
@@ -1480,6 +1519,9 @@
       document.getElementById(`${panelName}Panel`).classList.add("active");
       if (panelName === "payments") {
         renderPaymentApprovals(paymentSearch.value);
+      }
+      if (panelName === "vouchers") {
+        loadVouchers();
       }
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1599,6 +1641,7 @@
       adminInitialized = true;
       loadProducts();
       loadOrders();
+      loadVouchers();
       renderEmptyOrderDetail();
       showPanel("dashboard");
     }
@@ -1677,6 +1720,46 @@
         setLoginMessage("Cannot send password change request. Please run npm start first.");
       } finally {
         forgotPasswordButton.disabled = false;
+      }
+    });
+
+    voucherForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      voucherMessage.textContent = "";
+      voucherMessage.className = "message";
+
+      const voucherData = {
+        voucher_code: document.getElementById("voucherCode").value,
+        discount_percentage: document.getElementById("voucherDiscount").value,
+        expiry_date: document.getElementById("voucherExpiry").value || null,
+        max_redemptions: document.getElementById("voucherMaxUsers").value || null,
+        max_redemptions_per_user: document.getElementById("voucherPerUser").value || 1,
+        first_time_only: document.getElementById("voucherFirstTime").checked,
+        active: true
+      };
+
+      try {
+        const response = await apiFetch("/api/vouchers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(voucherData)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          voucherMessage.textContent = data.message || "Failed to create voucher.";
+          voucherMessage.className = "message error";
+          return;
+        }
+
+        voucherMessage.textContent = data.message || "Voucher created successfully.";
+        voucherMessage.className = "message success";
+        voucherForm.reset();
+        document.getElementById("voucherPerUser").value = 1;
+        loadVouchers();
+      } catch (error) {
+        voucherMessage.textContent = "Could not create voucher. Please check backend.";
+        voucherMessage.className = "message error";
       }
     });
 
@@ -1776,6 +1859,48 @@
 
     function formatMoney(value) {
       return `RM${Number(value || 0).toLocaleString("en-MY")}`;
+    }
+
+    async function loadVouchers() {
+      try {
+        const response = await apiFetch("/api/vouchers");
+        if (!response.ok) throw new Error("Failed to load vouchers");
+        const vouchers = await response.json();
+        renderVouchers(vouchers);
+      } catch (error) {
+        voucherList.innerHTML = `<div class="empty-orders">Could not load vouchers from backend.</div>`;
+      }
+    }
+
+    function formatVoucherDate(value) {
+      if (!value) return "No expiry";
+      return new Date(value).toLocaleDateString("en-GB");
+    }
+
+    function renderVouchers(vouchers) {
+      if (!vouchers.length) {
+        voucherList.innerHTML = `<div class="empty-orders">No vouchers yet.</div>`;
+        return;
+      }
+
+      voucherList.innerHTML = vouchers.map(voucher => {
+        const maxUsers = voucher.max_redemptions ? `${voucher.max_redemptions} user(s)` : "Unlimited users";
+        const used = Number(voucher.redeemed_count || 0);
+        return `
+          <article class="payment-card">
+            <div>
+              <h2>${voucher.voucher_code}</h2>
+              <p>${Number(voucher.discount_percentage)}% off • ${formatVoucherDate(voucher.expiry_date)}</p>
+              <div class="payment-meta">
+                <span class="payment-pill">${used}/${maxUsers} redeemed</span>
+                <span class="payment-pill">Limit ${voucher.max_redemptions_per_user || 1} per user</span>
+                ${voucher.first_time_only ? `<span class="payment-pill receipt">First-time only</span>` : ""}
+                <span class="payment-pill">${voucher.active ? "Active" : "Inactive"}</span>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
     }
 
     function renderStars(rating) {
