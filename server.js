@@ -970,39 +970,39 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const response = await gemini.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        "You are Scentique's friendly perfume assistant. Help customers choose perfumes, explain scent types, suggest products, and answer shop-related questions. Keep replies short and helpful.",
-        `Customer: ${message}`
-      ].join("\n\n")
-    });
+    const [products] = await db.query(`
+      SELECT
+        id,
+        name,
+        category,
+        scent,
+        perfume_type,
+        volume_ml,
+        type,
+        description,
+        price,
+        original_price,
+        sale_price,
+        discount_percentage,
+        stock,
+        sale
+      FROM products
+      ORDER BY stock > 0 DESC, sale DESC, id DESC
+    `);
 
-    res.json({
-      reply: response.text || "Sorry, I could not answer that."
-    });
-  } catch (error) {
-    console.error("Chatbot error:", error);
+    const catalog = products.map(product => {
+      const sale = product.sale === 1 || product.sale === true;
+      const currentPrice = Number(product.sale_price || product.price || 0);
+      const originalPrice = Number(product.original_price || product.price || currentPrice);
+      const discount = Number(product.discount_percentage || 0);
+      const stock = Number(product.stock || 0);
 
-    res.status(500).json({
-      reply: "Sorry, the AI assistant is not available right now."
-    });
-  }
-});
-
-// Homepage
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// Start server only after database is ready
-initDatabase()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error("Failed to initialize database:", error);
-    process.exit(1);
-  });
+      return [
+        `#${product.id}`,
+        `Name: ${product.name}`,
+        `Audience: ${product.category || "all"}`,
+        `Scent: ${product.scent || "not specified"}`,
+        `Type: ${product.perfume_type || product.type || "not specified"}`,
+        `Volume: ${product.volume_ml || "not specified"}ml`,
+        `Price: RM${currentPrice}`,
+        sale ? `Original price: RM${originalPrice}` : null,
