@@ -921,7 +921,7 @@
 
         console.log("Products from backend:", PRODUCTS);
 
-        renderProducts();
+        renderProducts(getSearchQuery());
       } catch (error) {
         console.error("Product loading error:", error);
 
@@ -950,9 +950,14 @@
       });
     }
 
+    function getSearchQuery() {
+      return (new URLSearchParams(window.location.search).get("q") || "").trim();
+    }
+
     function renderProducts(searchValue = "") {
       const grid = document.getElementById("productsGrid");
       const params = new URLSearchParams(window.location.search);
+      const activeSearchValue = searchValue || getSearchQuery();
 
       const currentCat = getCurrentCategory();
       updateBreadcrumbActive(currentCat);
@@ -980,8 +985,8 @@
           !saleOnly || productSale;
 
         const matchSearch =
-          productName.toLowerCase().includes(searchValue.toLowerCase()) ||
-          productType.toLowerCase().includes(searchValue.toLowerCase());
+          productName.toLowerCase().includes(activeSearchValue.toLowerCase()) ||
+          productType.toLowerCase().includes(activeSearchValue.toLowerCase());
 
         const scentText = `${productName} ${productType} ${productCategory} ${productScent} ${productDescription} ${productNotes}`.toLowerCase();
         const matchScent =
@@ -994,7 +999,9 @@
 
       console.log("Products shown on shop:", list);
       document.getElementById("resultsCount").textContent =
-        `You have viewed ${list.length} of ${PRODUCTS.length} results.`;
+        activeSearchValue
+          ? `Search results for "${escapeHtml(activeSearchValue)}": ${list.length} of ${PRODUCTS.length} results.`
+          : `You have viewed ${list.length} of ${PRODUCTS.length} results.`;
 
       if (list.length === 0) {
         grid.innerHTML = `
@@ -1101,6 +1108,7 @@
     const searchOverlay = document.getElementById("searchOverlay");
     const searchClose = document.getElementById("searchClose");
     const searchInput = document.getElementById("searchInput");
+    searchInput.value = getSearchQuery();
 
     openSearch.addEventListener("click", () => {
       searchOverlay.classList.add("open");
