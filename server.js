@@ -150,7 +150,8 @@ async function initDatabase() {
       state VARCHAR(100),
       order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-      order_status VARCHAR(50) DEFAULT 'Order Placed',
+      order_status VARCHAR(50) DEFAULT 'Unpaid',
+      tracking_number VARCHAR(100),
       paid BOOLEAN DEFAULT FALSE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
       FOREIGN KEY (voucher_id) REFERENCES vouchers(voucher_id) ON DELETE SET NULL
@@ -187,6 +188,7 @@ async function initDatabase() {
   await addColumnIfMissing("products", "perfume_type VARCHAR(50) DEFAULT 'Eau de Parfum'");
   await addColumnIfMissing("products", "volume_ml INT DEFAULT 50");
   await addColumnIfMissing("products", "description TEXT");
+  await addColumnIfMissing("orders", "tracking_number VARCHAR(100)");
   await ensureDefaultAdmin();
   console.log("Database tables are ready.");
 }
@@ -384,6 +386,84 @@ app.post("/api/auth/login", async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Login failed. Please try again." });
+  }
+});
+
+app.patch("/api/users/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const name = String(req.body.username || req.body.name || "").trim();
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const phoneNumber = String(req.body.phone_number || req.body.phone || "").trim() || null;
+    const oldPassword = String(req.body.oldPassword || req.body.old_password || "");
+    const newPassword = String(req.body.newPassword || req.body.new_password || "");
+
+    if (!id) {
+      return res.status(400).json({ message: "Missing user id." });
+    }
+
+    if (!name || !email) {
+      return res.status(400).json({ message: "Email and username are required." });
+    }
+
+    const [rows] = await db.query(
+      "SELECT id, name, email, password, phone_number, role FROM users WHERE id = ? AND role = 'customer' LIMIT 1",
+      [id]
+    );
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: "Customer account not found." });
+    }
+
+    const [existingEmail] = await db.query(
+      "SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1",
+      [email, id]
+    );
+
+    if (existingEmail.length > 0) {
+      return res.status(409).json({ message: "That email is already registered." });
+    }
+
+    let nextPassword = null;
+
+    if (newPassword) {
+      if (!oldPassword) {
+        return res.status(400).json({ message: "Enter your old password before setting a new one." });
+      }
+
+      if (!verifyPassword(oldPassword, user.password)) {
+        return res.status(401).json({ message: "Old password is incorrect." });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters." });
+      }
+
+      nextPassword = hashPassword(newPassword);
+    }
+
+    await db.query(
+      `UPDATE users
+       SET name = ?, email = ?, phone_number = ?, password = COALESCE(?, password)
+       WHERE id = ?`,
+      [name, email, phoneNumber, nextPassword, id]
+    );
+
+    res.json({
+      message: "Profile updated successfully.",
+      user: {
+        id,
+        username: name,
+        name,
+        email,
+        phone: phoneNumber || "",
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ message: "Profile update failed. Please try again." });
   }
 });
 
@@ -673,7 +753,7 @@ app.post("/api/orders", async (req, res) => {
     const [orderResult] = await connection.query(
       `INSERT INTO orders
         (user_id, voucher_id, customer_name, phone_number, address, postcode, city, state, total_amount, order_status, paid)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Order Placed', ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unpaid', ?)`,
       [
         user_id || null,
         voucher_id || null,
@@ -743,11 +823,38 @@ app.post("/api/orders", async (req, res) => {
 app.patch("/api/orders/:id/status", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { status, paid } = req.body;
+    const { status, paid, payment_status, tracking_number } = req.body;
+    const nextStatus = status ? String(status).trim() : null;
+    const trackingNumber = tracking_number !== undefined && tracking_number !== null
+      ? String(tracking_number).trim()
+      : null;
+
+    if (nextStatus === "Shipped") {
+      const [existingOrders] = await db.query(
+        "SELECT tracking_number FROM orders WHERE order_id = ? LIMIT 1",
+        [id]
+      );
+      const existingTrackingNumber = existingOrders[0]?.tracking_number || "";
+
+      if (!trackingNumber && !existingTrackingNumber) {
+        return res.status(400).json({
+          message: "Airway bill number is required before changing status to Shipped."
+        });
+      }
+    }
 
     const [result] = await db.query(
-      "UPDATE orders SET order_status = COALESCE(?, order_status), paid = COALESCE(?, paid) WHERE order_id = ?",
-      [status ?? null, paid !== undefined ? (paid ? 1 : 0) : null, id]
+      `UPDATE orders
+       SET order_status = COALESCE(?, order_status),
+           paid = COALESCE(?, paid),
+           tracking_number = COALESCE(?, tracking_number)
+       WHERE order_id = ?`,
+      [
+        nextStatus,
+        paid !== undefined ? (paid ? 1 : 0) : null,
+        trackingNumber,
+        id
+      ]
     );
 
     if (result.affectedRows === 0) {
@@ -756,10 +863,10 @@ app.patch("/api/orders/:id/status", async (req, res) => {
       });
     }
 
-    if (paid !== undefined) {
+    if (paid !== undefined || payment_status !== undefined) {
       await db.query(
         "UPDATE payments SET payment_status = ? WHERE order_id = ?",
-        [paid ? "Paid" : "Pending", id]
+        [payment_status || (paid ? "Paid" : "Pending"), id]
       );
     }
 
