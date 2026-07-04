@@ -1216,6 +1216,7 @@
 
             <label for="category">Audience</label>
             <select id="category" required>
+              <option value="unisex">Unisex</option>
               <option value="him">For Him</option>
               <option value="her">For Her</option>
             </select>
@@ -1831,6 +1832,7 @@
     }
 
     function formatAudience(category) {
+      if (category === "unisex") return "Unisex";
       return category === "her" ? "For Her" : "For Him";
     }
 
@@ -2378,3 +2380,4 @@
   </script>
 </body>
 </html>
+
