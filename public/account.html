@@ -532,7 +532,22 @@
       profileMessage.className = `form-message ${type}`;
     }
 
-    profileForm.addEventListener("submit", event => {
+    function getApiUrl(path) {
+      return window.location.protocol === "file:" ? `http://127.0.0.1:3000${path}` : path;
+    }
+
+    async function apiFetch(path, options) {
+      try {
+        return await fetch(getApiUrl(path), options);
+      } catch (error) {
+        if (window.location.protocol === "file:") {
+          return fetch(`http://localhost:3000${path}`, options);
+        }
+        throw error;
+      }
+    }
+
+    profileForm.addEventListener("submit", async event => {
       event.preventDefault();
       const email = document.getElementById("email").value.trim();
       const username = document.getElementById("username").value.trim();
@@ -545,23 +560,11 @@
         return;
       }
 
-      const users = JSON.parse(localStorage.getItem("scentique_users") || "[]");
       const session = Auth.current();
-      const userIndex = users.findIndex(user => user.email === session.email);
-
-      if (users.some((user, index) => user.email === email && index !== userIndex)) {
-        showMessage("That email is already registered.", "error");
-        return;
-      }
 
       if (newPassword) {
         if (!oldPassword) {
           showMessage("Enter your old password before setting a new one.", "error");
-          return;
-        }
-
-        if (oldPassword !== session.password) {
-          showMessage("Old password is incorrect.", "error");
           return;
         }
 
@@ -571,20 +574,46 @@
         }
       }
 
-      const updates = { email, username, phone };
-      if (newPassword) updates.password = newPassword;
-
-      if (userIndex > -1) {
-        Object.assign(users[userIndex], updates);
-        localStorage.setItem("scentique_users", JSON.stringify(users));
+      if (!session?.id) {
+        showMessage("Please login again before changing your profile.", "error");
+        return;
       }
 
-      Object.assign(session, updates);
-      localStorage.setItem("scentique_session", JSON.stringify(session));
-      document.getElementById("oldPassword").value = "";
-      document.getElementById("newPassword").value = "";
-      fillProfile();
-      showMessage("Profile updated successfully.", "success");
+      try {
+        const response = await apiFetch(`/api/users/${session.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            username,
+            phone,
+            oldPassword,
+            newPassword
+          })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showMessage(data.message || "Profile update failed.", "error");
+          return;
+        }
+
+        const updatedUser = {
+          ...session,
+          ...(data.user || {}),
+          username: data.user?.username || username,
+          email,
+          phone
+        };
+
+        localStorage.setItem("scentique_session", JSON.stringify(updatedUser));
+        document.getElementById("oldPassword").value = "";
+        document.getElementById("newPassword").value = "";
+        fillProfile();
+        showMessage(data.message || "Profile updated successfully.", "success");
+      } catch (error) {
+        showMessage("Cannot connect to backend. Please try again later.", "error");
+      }
     });
 
     function logout() {
