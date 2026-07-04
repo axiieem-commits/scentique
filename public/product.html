@@ -223,6 +223,29 @@
       margin-bottom: 48px;
     }
 
+    .price-stack {
+      display: grid;
+      gap: 4px;
+    }
+
+    .price-old {
+      color: #777;
+      text-decoration: line-through;
+      font-size: 24px;
+    }
+
+    .price-new {
+      color: #b62d2d;
+      font-weight: 900;
+    }
+
+    .discount-badge {
+      color: #0a7f41;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
     .stock {
       color: #05bd55;
       font-size: 33px;
@@ -609,6 +632,43 @@
       return product.description || `${product.name} is a ${getPerfumeType(product)} with a ${product.scent || "balanced"} scent profile, made for everyday confidence and memorable occasions.`;
     }
 
+    function productOriginalPrice(product) {
+      return Number(product.original_price || product.price || 0);
+    }
+
+    function productSalePrice(product) {
+      return Number(product.sale_price || product.price || 0);
+    }
+
+    function productDiscount(product) {
+      const original = productOriginalPrice(product);
+      const salePrice = productSalePrice(product);
+      const storedDiscount = Number(product.discount_percentage || 0);
+
+      if (storedDiscount > 0) return Math.round(storedDiscount);
+      if (original > 0 && salePrice < original) return Math.round(((original - salePrice) / original) * 100);
+      return 0;
+    }
+
+    function productPriceHtml(product) {
+      const isSale = product.sale === true || product.sale === 1;
+      const original = productOriginalPrice(product);
+      const salePrice = productSalePrice(product);
+      const discount = productDiscount(product);
+
+      if (!isSale) {
+        return `<div>RM${escapeHtml(original)}</div>`;
+      }
+
+      return `
+        <div class="price-stack">
+          <span class="price-old">RM${escapeHtml(original)}</span>
+          <span class="price-new">RM${escapeHtml(salePrice)}</span>
+          <span class="discount-badge">${escapeHtml(discount)}% off</span>
+        </div>
+      `;
+    }
+
     function updateBreadcrumbActive(category) {
       document.querySelectorAll(".breadcrumb a[data-cat]").forEach(link => {
         link.classList.toggle("active", link.dataset.cat === category);
@@ -623,7 +683,6 @@
       const stock = Number(product.stock ?? 0);
       const inStock = stock > 0;
       const image = product.image || "https://via.placeholder.com/520x520?text=Scentique";
-      const price = Number(product.price || 0);
 
       root.innerHTML = `
         <section class="product-shell">
@@ -637,7 +696,7 @@
             <div class="stars" aria-label="${escapeHtml(product.rating || 5)} star rating">${renderStars(product.rating)}</div>
             <div class="product-meta">
               <div>${escapeHtml(getVolume(product))}</div>
-              <div>RM${escapeHtml(price)}</div>
+              ${productPriceHtml(product)}
             </div>
             <div class="stock ${inStock ? "" : "out"}">${inStock ? `${stock} In Stock` : "Out of Stock"}</div>
 
@@ -689,12 +748,13 @@
       if (existing) {
         existing.qty = Number(existing.qty || existing.quantity || 0) + quantity;
         existing.quantity = existing.qty;
+        existing.price = productSalePrice(currentProduct);
       } else {
         cart.push({
           id: currentProduct.id,
           name: currentProduct.name,
           type: currentProduct.type || `${getPerfumeType(currentProduct)} (${getVolume(currentProduct)})`,
-          price: currentProduct.price,
+          price: productSalePrice(currentProduct),
           img: currentProduct.image,
           qty: quantity,
           quantity
