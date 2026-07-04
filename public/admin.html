@@ -720,8 +720,13 @@
       text-align: center;
     }
 
-    .status-select.dispatched {
+    .status-select.shipped,
+    .status-select.delivered {
       background-color: #7cdb7d;
+    }
+
+    .status-select.unpaid {
+      background-color: #f6b7b7;
     }
 
     .paid {
@@ -775,7 +780,16 @@
       border-color: #00a852;
     }
 
-    .payment-review-btn {
+    .payment-card-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .payment-review-btn,
+    .payment-reject-btn {
       min-width: 160px;
       height: 44px;
       border: 2px solid #000;
@@ -784,6 +798,12 @@
       color: #fff;
       font-size: 15px;
       font-weight: 900;
+    }
+
+    .payment-reject-btn {
+      background: #fff;
+      color: #b62d2d;
+      border-color: #b62d2d;
     }
 
     .detail-btn {
@@ -866,6 +886,22 @@
       font-size: 10px;
     }
 
+    .tracking-card {
+      margin-top: 18px;
+      display: grid;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: lowercase;
+    }
+
+    .tracking-card input {
+      height: 38px;
+      border: 1.5px solid #111;
+      padding: 0 12px;
+      font-size: 16px;
+    }
+
     .total-box {
       border: 3px solid #7c31ff;
     }
@@ -913,7 +949,8 @@
     }
 
     .proof-btn,
-    .approve-btn {
+    .approve-btn,
+    .reject-btn {
       width: 250px;
       min-height: 54px;
       border: 2px solid #000;
@@ -929,6 +966,13 @@
 
     .approve-btn {
       font-size: 15px;
+    }
+
+    .reject-btn {
+      color: #b62d2d;
+      border-color: #b62d2d;
+      font-size: 16px;
+      font-weight: 900;
     }
 
     .check-icon {
@@ -1274,8 +1318,9 @@
               <label>postcode<input id="detailPostcode" type="text" /></label>
               <label>city<input id="detailCity" type="text" /></label>
               <label>state<input id="detailState" type="text" /></label>
+              <label>airway bill number<input id="detailTrackingNumber" type="text" placeholder="J&T airway bill number" /></label>
               <button class="place-order-btn" type="button">Place Order</button>
-              <p class="detail-note">Your Canva profile name will be shared. Never submit passwords.</p>
+              <p class="detail-note">Enter the courier airway bill before changing an order to shipped.</p>
             </div>
           </section>
 
@@ -1307,6 +1352,7 @@
                 <span class="check-icon">✓</span>
                 <span>Approve payment and<br>proceed order</span>
               </button>
+              <button class="reject-btn" type="button" onclick="rejectCurrentOrder()">Reject payment</button>
             </div>
           </aside>
         </div>
@@ -1395,6 +1441,8 @@
     function getLocalOrders() {
       return JSON.parse(localStorage.getItem("scentique_orders") || "[]").map(order => ({
         ...order,
+        status: normalizeOrderStatus(order.status || order.order_status, Boolean(order.paid)),
+        trackingNumber: order.trackingNumber || order.tracking_number || "",
         paymentProof: order.paymentProof || order.payment_proof || ""
       }));
     }
@@ -1582,6 +1630,21 @@
       localStorage.setItem("scentique_orders", JSON.stringify(orders));
     }
 
+    function normalizeOrderStatus(status, paid = false) {
+      const value = String(status || "").toLowerCase();
+
+      if (value === "delivered") return "Delivered";
+      if (value === "shipped" || value === "dispatched") return "Shipped";
+      if (value.includes("process") || value.includes("pack")) return "Processing";
+      if (value === "rejected") return "Unpaid";
+      if (paid) return "Processing";
+      return "Unpaid";
+    }
+
+    function statusClassName(status) {
+      return String(status || "").toLowerCase();
+    }
+
     function getApiUrl(path) {
       return window.location.protocol === "file:" ? `http://127.0.0.1:3000${path}` : path;
     }
@@ -1615,8 +1678,9 @@
           postcode: order.postcode || "",
           city: order.city || "",
           state: order.state || "",
-          status: order.order_status || "Order Placed",
+          status: normalizeOrderStatus(order.order_status, Boolean(order.paid)),
           paid: Boolean(order.paid),
+          trackingNumber: order.tracking_number || "",
           paymentProof: order.payment_proof || "",
           paymentStatus: order.payment_status || "Pending",
           items: (order.items || []).map(item => ({
@@ -1783,7 +1847,7 @@
           return itemSum + Number(item.price || 0) * Number(item.qty || item.quantity || 0);
         }, 0);
       }, 0);
-      const pending = orders.filter(order => order.status !== "Dispatched").length;
+      const pending = orders.filter(order => !["Shipped", "Delivered"].includes(order.status)).length;
       document.getElementById("metricRevenue").textContent = formatMoney(revenue);
       document.getElementById("metricCustomers").textContent = new Set(orders.map(order => order.customer).filter(Boolean)).size;
       document.getElementById("metricOrders").textContent = orders.length;
@@ -1807,14 +1871,14 @@
 
       ordersList.innerHTML = orders.map(order => {
         const total = order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
-        const statusClass = order.status === "Dispatched" ? "dispatched" : "";
+        const statusClass = statusClassName(order.status);
         return `
           <div class="order-row">
             <button class="detail-btn" onclick="openOrderDetail('${order.id}')">#${order.id}</button>
             <span>${order.date}</span>
             <span>${order.customer}</span>
             <select class="status-select ${statusClass}" onchange="changeOrderStatus('${order.id}', this.value)">
-              ${["Order Placed", "Process Packaging", "Dispatched"].map(status => `
+              ${["Unpaid", "Processing", "Shipped", "Delivered"].map(status => `
                 <option value="${status}" ${status === order.status ? "selected" : ""}>${status}</option>
               `).join("")}
             </select>
@@ -1853,11 +1917,14 @@
               <p>${order.customer || "Customer"} • ${order.date} • ${itemCount} item${itemCount === 1 ? "" : "s"}</p>
               <p>Total: <strong>${formatMoney(total)}</strong></p>
               <div class="payment-meta">
-                <span class="payment-pill">Pending approval</span>
+                <span class="payment-pill">${order.paymentStatus === "Rejected" ? "Payment rejected" : "Pending approval"}</span>
                 <span class="payment-pill receipt">${order.paymentProof ? "Receipt uploaded" : "No receipt yet"}</span>
               </div>
             </div>
-            <button class="payment-review-btn" type="button" onclick="openPaymentApproval('${order.id}')">Review</button>
+            <div class="payment-card-actions">
+              <button class="payment-review-btn" type="button" onclick="openPaymentApproval('${order.id}')">Review</button>
+              <button class="payment-reject-btn" type="button" onclick="rejectOrderPayment('${order.id}')">Reject</button>
+            </div>
           </article>
         `;
       }).join("");
@@ -1876,6 +1943,7 @@
       document.getElementById("detailPostcode").value = "";
       document.getElementById("detailCity").value = "";
       document.getElementById("detailState").value = "";
+      document.getElementById("detailTrackingNumber").value = "";
       document.getElementById("detailProducts").innerHTML = "No order selected";
       document.getElementById("detailProductTotal").textContent = formatMoney(0);
       document.getElementById("detailQty").textContent = "x 0";
@@ -1902,6 +1970,7 @@
       document.getElementById("detailPostcode").value = order.postcode || "";
       document.getElementById("detailCity").value = order.city || "";
       document.getElementById("detailState").value = order.state || "";
+      document.getElementById("detailTrackingNumber").value = order.trackingNumber || "";
       document.getElementById("detailProducts").innerHTML = order.items.map(item => `
         ${item.name}<small>${item.type}</small>
       `).join("<br>");
@@ -1946,7 +2015,8 @@
         return;
       }
       order.paid = true;
-      order.status = "Process Packaging";
+      order.status = "Processing";
+      order.paymentStatus = "Paid";
       saveOrders(orders);
       renderOrders(orderSearch.value);
       renderPaymentApprovals(paymentSearch.value);
@@ -1957,17 +2027,75 @@
         await apiFetch(`/api/orders/${currentOrderId}/status`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: order.status, paid: true })
+          body: JSON.stringify({ status: order.status, paid: true, payment_status: "Paid" })
         });
       } catch (error) {
         // Browser state is updated; database can retry on the next change.
       }
     }
 
+    async function rejectOrderPayment(id) {
+      const orders = getOrders();
+      const order = orders.find(item => Number(item.id) === Number(id));
+      if (!order) return;
+
+      const confirmReject = confirm(`Reject payment for order #${order.id}?`);
+      if (!confirmReject) return;
+
+      order.paid = false;
+      order.status = "Unpaid";
+      order.paymentStatus = "Rejected";
+      saveOrders(orders);
+      renderOrders(orderSearch.value);
+      renderPaymentApprovals(paymentSearch.value);
+      renderDashboard();
+      if (currentOrderId && Number(currentOrderId) === Number(id)) {
+        openOrderDetail(currentOrderId);
+      }
+
+      try {
+        await apiFetch(`/api/orders/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "Unpaid", paid: false, payment_status: "Rejected" })
+        });
+      } catch (error) {
+        // Browser state is updated; database can retry on the next change.
+      }
+    }
+
+    function rejectCurrentOrder() {
+      if (!currentOrderId) return;
+      rejectOrderPayment(currentOrderId);
+    }
+
     async function changeOrderStatus(id, status) {
       const orders = getOrders();
       const order = orders.find(item => Number(item.id) === Number(id));
       if (!order) return;
+      const previousStatus = order.status;
+      const trackingInput = currentOrderId && Number(currentOrderId) === Number(id)
+        ? document.getElementById("detailTrackingNumber")
+        : null;
+      const currentTrackingNumber = trackingInput
+        ? trackingInput.value.trim()
+        : String(order.trackingNumber || "").trim();
+
+      if (status === "Shipped" && !currentTrackingNumber) {
+        const trackingNumber = prompt("Enter J&T airway bill number before changing this order to Shipped:");
+
+        if (!trackingNumber || !trackingNumber.trim()) {
+          alert("Airway bill number is required before shipping.");
+          renderOrders(orderSearch.value);
+          return;
+        }
+
+        order.trackingNumber = trackingNumber.trim();
+        if (trackingInput) trackingInput.value = order.trackingNumber;
+      } else if (currentTrackingNumber) {
+        order.trackingNumber = currentTrackingNumber;
+      }
+
       order.status = status;
       saveOrders(orders);
       renderOrders(orderSearch.value);
@@ -1975,13 +2103,24 @@
       renderDashboard();
 
       try {
-        await apiFetch(`/api/orders/${id}/status`, {
+        const response = await apiFetch(`/api/orders/${id}/status`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status })
+          body: JSON.stringify({
+            status,
+            tracking_number: order.trackingNumber || null
+          })
         });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to update order status.");
+        }
       } catch (error) {
-        // Browser state is updated; database can retry on the next change.
+        alert(error.message || "Failed to update order status.");
+        order.status = previousStatus;
+        saveOrders(orders);
+        renderOrders(orderSearch.value);
       }
     }
 
