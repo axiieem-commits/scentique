@@ -60,6 +60,9 @@ const Cart = {
 /* ── AUTH STORE ── */
 const Auth = {
   register(username, email, password) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || '').trim())) {
+      return { ok: false, msg: 'Please enter a valid email address.' };
+    }
     const users = JSON.parse(localStorage.getItem('scentique_users') || '[]');
     if (users.find(u => u.email === email)) return { ok: false, msg: 'Email already registered.' };
     users.push({ username, email, password });
