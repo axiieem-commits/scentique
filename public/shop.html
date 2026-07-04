@@ -828,6 +828,8 @@
       <div class="breadcrumb">
         <a href="index.html">Home</a>
         <span>/</span>
+        <a href="shop.html" data-cat="all">All</a>
+        <span>/</span>
         <a href="shop.html?cat=him" data-cat="him">For Him</a>
         <span>/</span>
         <a href="shop.html?cat=her" data-cat="her">For Her</a>
@@ -1012,6 +1014,12 @@
       });
     }
 
+    function matchesCategory(productCategory, currentCat) {
+      if (currentCat === "all") return true;
+      if (productCategory === "unisex" && (currentCat === "him" || currentCat === "her")) return true;
+      return productCategory === currentCat;
+    }
+
     function getSearchQuery() {
       return (new URLSearchParams(window.location.search).get("q") || "").trim();
     }
@@ -1040,8 +1048,7 @@
         const productNotes = product.notes || "";
         const productSale = product.sale === true || product.sale === 1;
 
-        const matchCategory =
-          currentCat === "all" || productCategory === currentCat;
+        const matchCategory = matchesCategory(productCategory, currentCat);
 
         const matchSale =
           !saleOnly || productSale;
