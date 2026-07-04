@@ -759,7 +759,19 @@
           </div>
           <div class="form-group">
             <label for="shipAddr">Address</label>
-            <textarea id="shipAddr" class="form-control" placeholder="Street, City, Postcode, State"></textarea>
+            <textarea id="shipAddr" class="form-control" placeholder="Street address"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="shipPostcode">Postcode</label>
+            <input type="text" id="shipPostcode" class="form-control" placeholder="43000" />
+          </div>
+          <div class="form-group">
+            <label for="shipCity">City</label>
+            <input type="text" id="shipCity" class="form-control" placeholder="Kajang" />
+          </div>
+          <div class="form-group">
+            <label for="shipState">State</label>
+            <input type="text" id="shipState" class="form-control" placeholder="Selangor" />
           </div>
           <button class="btn btn-pink-full" id="placeOrderBtn" type="button" onclick="placeOrder()">Place Order</button>
         </div>
@@ -1052,7 +1064,10 @@ async function placeOrder() {
   const name = document.getElementById('shipName').value.trim();
   const phone = document.getElementById('shipPhone').value.trim();
   const addr = document.getElementById('shipAddr').value.trim();
-  if (!name || !phone || !addr) {
+  const postcode = document.getElementById('shipPostcode').value.trim();
+  const city = document.getElementById('shipCity').value.trim();
+  const state = document.getElementById('shipState').value.trim();
+  if (!name || !phone || !addr || !postcode || !city || !state) {
     Toast.show('Please fill in all shipping details.', 'error');
     return;
   }
@@ -1088,6 +1103,9 @@ async function placeOrder() {
         customer_name: name,
         phone_number: phone,
         address: addr,
+        postcode,
+        city,
+        state,
         total_amount: total,
         paid: false,
         payment_proof: paymentProofData,
@@ -1125,9 +1143,9 @@ async function placeOrder() {
     customer: name,
     phone,
     address: addr,
-    postcode: '',
-    city: '',
-    state: '',
+    postcode,
+    city,
+    state,
     status: 'Unpaid',
     paid: false,
     paymentProofUploaded: true,
@@ -1138,21 +1156,3 @@ async function placeOrder() {
       qty: Number(item.qty || item.quantity || 1)
     }))
   });
-  localStorage.setItem('scentique_orders', JSON.stringify(orders));
-  console.log('Saved Scentique order backup:', orders[0]);
-  // Clear cart and show success
-  Cart.save([]);
-  paymentProofData = '';
-  document.getElementById('checkoutForm').style.display = 'none';
-  document.getElementById('orderSuccess').classList.add('show');
-  Toast.show('Order placed successfully! 🌸', 'success');
-  renderCart();
-  orderSubmitting = false;
-  placeOrderBtn.disabled = false;
-  placeOrderBtn.textContent = 'Place Order';
-}
-
-renderCart();
-</script>
-</body>
-</html>
