@@ -780,7 +780,7 @@
               <p>Upload Payment Proof</p>
               <div class="uploaded-name" id="uploadedName"></div>
             </label>
-            <p class="payment-note">Your order will stay under To Pay until admin approves your receipt.</p>
+            <p class="payment-note">Your order will stay unpaid until admin approves your receipt.</p>
           </div>
         </div>
       </div>
@@ -789,8 +789,8 @@
     <!-- Success state -->
     <div class="order-success" id="orderSuccess">
       <div class="icon">🌸</div>
-      <h2>Order Placed!</h2>
-      <p>Thank you for your order. It will stay under To Pay until admin verifies your receipt.</p>
+      <h2>Order Submitted!</h2>
+      <p>Thank you for your order. It will stay unpaid until admin verifies your receipt.</p>
       <a href="orders.html" class="btn btn-primary">View My Orders</a>
     </div>
   </div>
@@ -1128,7 +1128,7 @@ async function placeOrder() {
     postcode: '',
     city: '',
     state: '',
-    status: 'Order Placed',
+    status: 'Unpaid',
     paid: false,
     paymentProofUploaded: true,
     items: items.map(item => ({
