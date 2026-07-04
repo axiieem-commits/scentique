@@ -227,14 +227,21 @@
     }
 
     .tab-btn {
-      min-width: 136px;
+      min-width: 142px;
       height: 38px;
       border: 2px solid #000;
       border-radius: 999px;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
       color: #000;
       background: #fff;
+      padding: 0 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      white-space: nowrap;
+      line-height: 1;
     }
 
     .tab-btn.active {
@@ -1098,7 +1105,6 @@
       <button class="tab-btn" data-panel="products">Add Product</button>
       <button class="tab-btn" data-panel="payments">Payment Approval</button>
       <button class="tab-btn" data-panel="orders">Order Summary</button>
-      <button class="tab-btn" data-panel="detail">Payment Detail</button>
     </nav>
 
   <main class="admin-page">
@@ -1319,7 +1325,7 @@
               <label>city<input id="detailCity" type="text" /></label>
               <label>state<input id="detailState" type="text" /></label>
               <label>airway bill number<input id="detailTrackingNumber" type="text" placeholder="J&T airway bill number" /></label>
-              <button class="place-order-btn" type="button">Place Order</button>
+              <button class="place-order-btn" type="button" onclick="saveTrackingNumber()">Save Airway Bill</button>
               <p class="detail-note">Enter the courier airway bill before changing an order to shipped.</p>
             </div>
           </section>
@@ -2067,6 +2073,34 @@
     function rejectCurrentOrder() {
       if (!currentOrderId) return;
       rejectOrderPayment(currentOrderId);
+    }
+
+    async function saveTrackingNumber() {
+      if (!currentOrderId) return;
+      const trackingNumber = document.getElementById("detailTrackingNumber").value.trim();
+      const orders = getOrders();
+      const order = orders.find(item => Number(item.id) === Number(currentOrderId));
+      if (!order) return;
+
+      order.trackingNumber = trackingNumber;
+      saveOrders(orders);
+
+      try {
+        const response = await apiFetch(`/api/orders/${currentOrderId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tracking_number: trackingNumber || null })
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to save airway bill.");
+        }
+
+        alert("Airway bill saved.");
+      } catch (error) {
+        alert(error.message || "Failed to save airway bill.");
+      }
     }
 
     async function changeOrderStatus(id, status) {
