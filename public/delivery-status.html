@@ -149,6 +149,22 @@
       color: #fff;
     }
 
+    .tracking-box {
+      max-width: 760px;
+      margin: 18px auto 0;
+      padding: 18px 22px;
+      border: 1.5px solid #111;
+      background: #fff;
+      text-align: center;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .tracking-box strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 18px;
+    }
+
     .missing-order {
       max-width: 430px;
       margin: 0 auto;
@@ -224,13 +240,17 @@
     }
 
     function normalizeOrder(order) {
+      const paid = Boolean(order.paid);
+      const status = normalizeOrderStatus(order.order_status || order.status, paid);
       return {
         id: order.order_id || order.id,
         user_id: order.user_id || order.userId || null,
         date: order.order_date || order.date,
-        status: order.order_status || order.status || "Order Placed",
-        paid: Boolean(order.paid),
+        status,
+        paid,
         paymentProof: order.payment_proof || order.paymentProof || "",
+        paymentStatus: order.payment_status || order.paymentStatus || "Pending",
+        trackingNumber: order.tracking_number || order.trackingNumber || "",
         items: order.items || []
       };
     }
@@ -254,12 +274,26 @@
     }
 
     function statusIndex(order) {
-      const status = String(order.status).toLowerCase();
-      if (status === "delivered") return 3;
-      if (status === "dispatched") return 2;
-      if (status.includes("process") || status.includes("pack")) return 1;
-      if (order.paid) return 0;
-      return -1;
+      const status = normalizeOrderStatus(order.status, order.paid);
+      if (status === "Delivered") return 3;
+      if (status === "Shipped") return 2;
+      if (status === "Processing") return 1;
+      return 0;
+    }
+
+    function normalizeOrderStatus(status, paid = false) {
+      const value = String(status || "").toLowerCase();
+
+      if (value === "delivered") return "Delivered";
+      if (value === "shipped" || value === "dispatched") return "Shipped";
+      if (value.includes("process") || value.includes("pack")) return "Processing";
+      if (value === "rejected") return "Unpaid";
+      if (paid) return "Processing";
+      return "Unpaid";
+    }
+
+    function jntTrackingUrl() {
+      return "https://www.jtexpress.my/tracking";
     }
 
     function stepClass(index, current) {
@@ -285,8 +319,8 @@
                 </svg>
               </div>
               <div>
-                <h2>Payment approved and package is being packed</h2>
-                <small>${order.paid ? "Payment confirmed" : "Receipt uploaded, waiting for admin approval"}</small>
+                <h2>Unpaid</h2>
+                <small>${order.paymentStatus === "Rejected" ? "Payment rejected. Please contact Scentique support." : order.paid ? "Payment approved" : "Receipt uploaded, waiting for admin approval"}</small>
               </div>
             </article>
 
@@ -299,7 +333,8 @@
                   <circle cx="17" cy="18" r="1.8"></circle>
                 </svg>
               </div>
-              <h2>Package ready for delivery</h2>
+              <h2>Processing</h2>
+              <small>Admin is preparing your perfume for courier pickup</small>
             </article>
 
             <article class="step ${stepClass(2, current)}">
@@ -313,7 +348,8 @@
                   <circle cx="18" cy="18" r="2"></circle>
                 </svg>
               </div>
-              <h2>Out for delivery</h2>
+              <h2>Shipped</h2>
+              <small>${order.trackingNumber ? `J&T airway bill: ${order.trackingNumber}` : "Waiting for courier airway bill"}</small>
             </article>
 
             <article class="step ${stepClass(3, current)}">
@@ -328,8 +364,16 @@
           </div>
         </section>
 
+        ${order.trackingNumber ? `
+          <section class="tracking-box">
+            Track your parcel directly on J&T Express Malaysia:
+            <strong>${order.trackingNumber}</strong>
+          </section>
+        ` : ""}
+
         <div class="status-actions">
           <a href="orders.html">All Orders</a>
+          ${order.trackingNumber ? `<a href="${jntTrackingUrl()}" target="_blank" rel="noopener">Track J&T</a>` : ""}
           <a class="primary" href="shop.html">Continue Shopping</a>
         </div>
       `;
