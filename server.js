@@ -111,9 +111,13 @@ async function initDatabase() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS vouchers (
       voucher_id INT AUTO_INCREMENT PRIMARY KEY,
-      voucher_code VARCHAR(50) UNIQUE NOT NULL,
+      voucher_code VARCHAR(20) UNIQUE NOT NULL,
       discount_percentage DECIMAL(5,2) NOT NULL DEFAULT 0,
-      expiry_date DATE,
+      expiry_date DATE NOT NULL,
+      max_redemptions INT,
+      max_redemptions_per_user INT DEFAULT 1,
+      first_time_only BOOLEAN DEFAULT FALSE,
+      active BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -162,6 +166,19 @@ async function initDatabase() {
   `);
 
   await db.query(`
+    CREATE TABLE IF NOT EXISTS voucher_redemptions (
+      redemption_id INT AUTO_INCREMENT PRIMARY KEY,
+      voucher_id INT NOT NULL,
+      user_id INT NOT NULL,
+      order_id INT,
+      redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (voucher_id) REFERENCES vouchers(voucher_id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE SET NULL
+    )
+  `);
+
+  await db.query(`
     CREATE TABLE IF NOT EXISTS order_items (
       order_item_id INT AUTO_INCREMENT PRIMARY KEY,
       order_id INT NOT NULL,
@@ -195,8 +212,39 @@ async function initDatabase() {
   await addColumnIfMissing("products", "sale_price DECIMAL(10,2)");
   await addColumnIfMissing("products", "discount_percentage DECIMAL(5,2)");
   await addColumnIfMissing("orders", "tracking_number VARCHAR(100)");
+  await addColumnIfMissing("vouchers", "max_redemptions INT");
+  await addColumnIfMissing("vouchers", "max_redemptions_per_user INT DEFAULT 1");
+  await addColumnIfMissing("vouchers", "first_time_only BOOLEAN DEFAULT FALSE");
+  await addColumnIfMissing("vouchers", "active BOOLEAN DEFAULT TRUE");
+  await ensureDefaultVouchers();
+  await alignVoucherSchema();
   await ensureDefaultAdmin();
   console.log("Database tables are ready.");
+}
+
+async function ensureDefaultVouchers() {
+  await db.query(
+    `INSERT IGNORE INTO vouchers
+      (voucher_code, discount_percentage, expiry_date, max_redemptions, max_redemptions_per_user, first_time_only, active)
+     VALUES ('FIRSTTIME15', 15, '2099-12-31', NULL, 1, TRUE, TRUE)`
+  );
+}
+
+async function alignVoucherSchema() {
+  const alterStatements = [
+    "ALTER TABLE vouchers MODIFY voucher_code VARCHAR(20) NOT NULL",
+    "ALTER TABLE vouchers MODIFY discount_percentage DECIMAL(5,2) NOT NULL DEFAULT 0",
+    "UPDATE vouchers SET expiry_date = '2099-12-31' WHERE expiry_date IS NULL",
+    "ALTER TABLE vouchers MODIFY expiry_date DATE NOT NULL"
+  ];
+
+  for (const statement of alterStatements) {
+    try {
+      await db.query(statement);
+    } catch (error) {
+      console.warn("Voucher schema alignment skipped:", error.message);
+    }
+  }
 }
 
 function normalizeProductPricing(data) {
@@ -737,6 +785,168 @@ app.delete("/api/products/:id", async (req, res) => {
   }
 });
 
+async function validateVoucherForUser(userId, code, subtotal, queryRunner = db) {
+  const voucherCode = String(code || "").trim().toUpperCase();
+
+  if (!voucherCode) {
+    return { ok: false, message: "Enter a voucher code." };
+  }
+
+  const [voucherRows] = await queryRunner.query(
+    `SELECT * FROM vouchers
+     WHERE UPPER(voucher_code) = ?
+     LIMIT 1`,
+    [voucherCode]
+  );
+  const voucher = voucherRows[0];
+
+  if (!voucher || !voucher.active) {
+    return { ok: false, message: "Invalid voucher code." };
+  }
+
+  if (voucher.expiry_date) {
+    const expiry = new Date(voucher.expiry_date);
+    expiry.setHours(23, 59, 59, 999);
+    if (expiry < new Date()) {
+      return { ok: false, message: "This voucher has expired." };
+    }
+  }
+
+  const [totalRows] = await queryRunner.query(
+    "SELECT COUNT(*) AS count FROM voucher_redemptions WHERE voucher_id = ?",
+    [voucher.voucher_id]
+  );
+  const totalUsed = Number(totalRows[0]?.count || 0);
+
+  if (voucher.max_redemptions && totalUsed >= Number(voucher.max_redemptions)) {
+    return { ok: false, message: "This voucher has reached its usage limit." };
+  }
+
+  const [userRows] = await queryRunner.query(
+    "SELECT COUNT(*) AS count FROM voucher_redemptions WHERE voucher_id = ? AND user_id = ?",
+    [voucher.voucher_id, userId]
+  );
+  const userUsed = Number(userRows[0]?.count || 0);
+  const perUserLimit = Number(voucher.max_redemptions_per_user || 1);
+
+  if (userUsed >= perUserLimit) {
+    return { ok: false, message: "You have already redeemed this voucher." };
+  }
+
+  if (voucher.first_time_only) {
+    const [orderRows] = await queryRunner.query(
+      "SELECT COUNT(*) AS count FROM orders WHERE user_id = ?",
+      [userId]
+    );
+
+    if (Number(orderRows[0]?.count || 0) > 0) {
+      return { ok: false, message: "This voucher is only for first-time customers." };
+    }
+  }
+
+  const discountRate = Number(voucher.discount_percentage || 0) / 100;
+  const discountAmount = Math.round(Number(subtotal || 0) * discountRate);
+
+  return {
+    ok: true,
+    voucher,
+    discountAmount,
+    message: `${voucher.voucher_code} applied. ${Number(voucher.discount_percentage)}% off.`
+  };
+}
+
+app.get("/api/vouchers", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        vouchers.*,
+        COUNT(voucher_redemptions.redemption_id) AS redeemed_count
+      FROM vouchers
+      LEFT JOIN voucher_redemptions ON voucher_redemptions.voucher_id = vouchers.voucher_id
+      GROUP BY vouchers.voucher_id
+      ORDER BY vouchers.created_at DESC
+    `);
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Voucher list error:", error);
+    res.status(500).json({ message: "Failed to load vouchers." });
+  }
+});
+
+app.post("/api/vouchers", async (req, res) => {
+  try {
+    const voucherCode = String(req.body.voucher_code || req.body.code || "").trim().toUpperCase();
+    const discountPercentage = Number(req.body.discount_percentage || 0);
+    const expiryDate = req.body.expiry_date || null;
+    const maxRedemptions = req.body.max_redemptions ? Number(req.body.max_redemptions) : null;
+    const maxRedemptionsPerUser = Number(req.body.max_redemptions_per_user || 1);
+    const firstTimeOnly = Boolean(req.body.first_time_only);
+    const active = req.body.active !== false;
+
+    if (!voucherCode || discountPercentage <= 0 || !expiryDate) {
+      return res.status(400).json({ message: "Voucher code, discount percentage, and expiry date are required." });
+    }
+
+    if (voucherCode.length > 20) {
+      return res.status(400).json({ message: "Voucher code must be 20 characters or less." });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO vouchers
+        (voucher_code, discount_percentage, expiry_date, max_redemptions, max_redemptions_per_user, first_time_only, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        voucherCode,
+        discountPercentage,
+        expiryDate,
+        maxRedemptions,
+        maxRedemptionsPerUser,
+        firstTimeOnly ? 1 : 0,
+        active ? 1 : 0
+      ]
+    );
+
+    res.status(201).json({
+      message: "Voucher created successfully.",
+      voucher_id: result.insertId
+    });
+  } catch (error) {
+    console.error("Voucher create error:", error);
+    res.status(error.code === "ER_DUP_ENTRY" ? 409 : 500).json({
+      message: error.code === "ER_DUP_ENTRY" ? "Voucher code already exists." : "Failed to create voucher."
+    });
+  }
+});
+
+app.post("/api/vouchers/validate", async (req, res) => {
+  try {
+    const userId = Number(req.body.user_id);
+    const subtotal = Number(req.body.subtotal || 0);
+
+    if (!userId) {
+      return res.status(401).json({ message: "Please login before applying a voucher." });
+    }
+
+    const result = await validateVoucherForUser(userId, req.body.voucher_code || req.body.code, subtotal);
+
+    if (!result.ok) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    res.json({
+      message: result.message,
+      voucher_id: result.voucher.voucher_id,
+      voucher_code: result.voucher.voucher_code,
+      discount_percentage: Number(result.voucher.discount_percentage || 0),
+      discount_amount: result.discountAmount
+    });
+  } catch (error) {
+    console.error("Voucher validation error:", error);
+    res.status(500).json({ message: "Failed to validate voucher." });
+  }
+});
+
 app.get("/api/orders", async (req, res) => {
   try {
     const userId = req.query.user_id ? Number(req.query.user_id) : null;
@@ -787,6 +997,7 @@ app.post("/api/orders", async (req, res) => {
     const {
       user_id,
       voucher_id,
+      voucher_code,
       customer_name,
       phone_number,
       address,
@@ -827,6 +1038,18 @@ app.post("/api/orders", async (req, res) => {
     const calculatedTotal = items.reduce((sum, item) => {
       return sum + Number(item.price || 0) * Number(item.quantity || item.qty || 1);
     }, 0);
+    let appliedVoucherId = voucher_id || null;
+
+    if (voucher_code) {
+      const voucherResult = await validateVoucherForUser(user_id, voucher_code, calculatedTotal, connection);
+
+      if (!voucherResult.ok) {
+        await connection.rollback();
+        return res.status(400).json({ message: voucherResult.message });
+      }
+
+      appliedVoucherId = voucherResult.voucher.voucher_id;
+    }
 
     const [orderResult] = await connection.query(
       `INSERT INTO orders
@@ -834,7 +1057,7 @@ app.post("/api/orders", async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unpaid', ?)`,
       [
         user_id || null,
-        voucher_id || null,
+        appliedVoucherId,
         customer_name,
         phone_number,
         address,
@@ -879,6 +1102,13 @@ app.post("/api/orders", async (req, res) => {
        VALUES (?, ?, ?)`,
       [orderId, payment_proof || null, paid ? "Paid" : "Pending"]
     );
+
+    if (appliedVoucherId) {
+      await connection.query(
+        "INSERT INTO voucher_redemptions (voucher_id, user_id, order_id) VALUES (?, ?, ?)",
+        [appliedVoucherId, user_id, orderId]
+      );
+    }
 
     await connection.commit();
 
