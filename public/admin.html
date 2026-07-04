@@ -541,6 +541,9 @@
       padding: 22px;
       position: sticky;
       top: 24px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      scrollbar-gutter: stable;
     }
 
     .form-card h2 {
@@ -1039,6 +1042,8 @@
 
       .form-card {
         position: static;
+        max-height: none;
+        overflow: visible;
       }
 
       .orders-table {
@@ -2380,4 +2385,3 @@
   </script>
 </body>
 </html>
-
