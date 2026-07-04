@@ -361,10 +361,10 @@
 
     <div class="orders-tabs" id="orderTabs">
       <button class="active" data-filter="all">All</button>
-      <button data-filter="pay">To Pay</button>
-      <button data-filter="ship">To Ship</button>
-      <button data-filter="receive">To Receive</button>
-      <button data-filter="completed">Completed</button>
+      <button data-filter="unpaid">Unpaid</button>
+      <button data-filter="processing">Processing</button>
+      <button data-filter="shipped">Shipped</button>
+      <button data-filter="delivered">Delivered</button>
     </div>
 
     <label class="order-search">
@@ -410,14 +410,18 @@
     }
 
     function normalizeOrder(order) {
+      const paid = Boolean(order.paid);
+      const status = normalizeOrderStatus(order.order_status || order.status, paid);
       return {
         id: order.order_id || order.id,
         user_id: order.user_id || order.userId || null,
         date: order.order_date || order.date,
         customer: order.customer_name || order.customer || "",
-        status: order.order_status || order.status || "Order Placed",
-        paid: Boolean(order.paid),
+        status,
+        paid,
         paymentProof: order.payment_proof || order.paymentProof || "",
+        paymentStatus: order.payment_status || order.paymentStatus || "Pending",
+        trackingNumber: order.tracking_number || order.trackingNumber || "",
         total: Number(order.total_amount || 0),
         items: (order.items || []).map(item => ({
           id: item.product_id || item.id,
@@ -444,22 +448,39 @@
       return Array.from(merged.values());
     }
 
+    function normalizeOrderStatus(status, paid = false) {
+      const value = String(status || "").toLowerCase();
+
+      if (value === "delivered") return "Delivered";
+      if (value === "shipped" || value === "dispatched") return "Shipped";
+      if (value.includes("process") || value.includes("pack")) return "Processing";
+      if (value === "rejected") return "Unpaid";
+      if (paid) return "Processing";
+      return "Unpaid";
+    }
+
+    function jntTrackingUrl() {
+      return "https://www.jtexpress.my/tracking";
+    }
+
     function statusFilter(order) {
-      const status = String(order.status).toLowerCase();
-      if (currentFilter === "pay") return !order.paid;
-      if (currentFilter === "ship") return order.paid && status !== "dispatched" && status !== "delivered";
-      if (currentFilter === "receive") return status === "dispatched";
-      if (currentFilter === "completed") return status === "delivered";
+      const status = normalizeOrderStatus(order.status, order.paid);
+      if (currentFilter === "unpaid") return status === "Unpaid";
+      if (currentFilter === "processing") return status === "Processing";
+      if (currentFilter === "shipped") return status === "Shipped";
+      if (currentFilter === "delivered") return status === "Delivered";
       return true;
     }
 
     function statusLabel(order) {
-      const status = String(order.status).toLowerCase();
-      if (!order.paid && order.paymentProof) return "Receipt uploaded, awaiting admin approval";
-      if (!order.paid) return "Awaiting payment receipt";
-      if (status === "delivered") return "Parcel has been delivered";
-      if (status === "dispatched") return "Parcel is on the way";
-      return "Payment approved and package is being packed";
+      const status = normalizeOrderStatus(order.status, order.paid);
+
+      if (status === "Delivered") return "Delivered";
+      if (status === "Shipped") return "Shipped";
+      if (status === "Processing") return "Processing";
+      if (order.paymentStatus === "Rejected") return "Unpaid - payment rejected";
+      if (order.paymentProof) return "Unpaid - receipt awaiting approval";
+      return "Unpaid";
     }
 
     function renderOrders() {
@@ -506,9 +527,13 @@
             </div>
 
             <footer class="order-card-foot">
-              <span class="order-total">Order Total: <strong>${formatMoney(total)}</strong></span>
+              <span class="order-total">
+                Order Total: <strong>${formatMoney(total)}</strong>
+                ${order.trackingNumber ? `<br><small>Airway bill: ${order.trackingNumber}</small>` : ""}
+              </span>
               <div class="order-actions">
                 <a class="primary" href="delivery-status.html?order=${order.id}">View Progress</a>
+                ${order.trackingNumber ? `<a href="${jntTrackingUrl()}" target="_blank" rel="noopener">Track J&T</a>` : ""}
                 <a href="shop.html">Buy Again</a>
               </div>
             </footer>
