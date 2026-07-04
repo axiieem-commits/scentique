@@ -471,6 +471,30 @@
       line-height: 1.25;
     }
 
+    .stock-price-stack {
+      display: grid;
+      gap: 4px;
+      margin-top: 6px;
+      font-size: 24px;
+      line-height: 1.15;
+    }
+
+    .stock-price-old {
+      color: #777;
+      text-decoration: line-through;
+    }
+
+    .stock-price-sale {
+      color: #b62d2d;
+      font-weight: 900;
+    }
+
+    .stock-discount {
+      color: #0a7f41;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
     .stock-left {
       margin-top: 22px;
       color: #00bf63;
@@ -1220,8 +1244,14 @@
             <label for="description">Description</label>
             <textarea id="description" placeholder="Short perfume notes or description"></textarea>
 
-            <label for="price">Price RM</label>
-            <input type="number" id="price" placeholder="259" required />
+            <label for="price">Regular Price RM</label>
+            <input type="number" id="price" placeholder="259" step="0.01" required />
+
+            <label for="salePrice">Sale Price RM</label>
+            <input type="number" id="salePrice" placeholder="199" step="0.01" />
+
+            <label for="discountPercentage">Discount %</label>
+            <input type="number" id="discountPercentage" placeholder="20" min="0" max="100" step="0.01" />
 
             <label for="stock">Stock</label>
             <input type="number" id="stock" placeholder="67" value="10" required />
@@ -1388,6 +1418,10 @@
     const imagePreview = document.getElementById("imagePreview");
     const imageUrlPanel = document.getElementById("imageUrlPanel");
     const imageFilePanel = document.getElementById("imageFilePanel");
+    const saleCheckbox = document.getElementById("sale");
+    const priceInput = document.getElementById("price");
+    const salePriceInput = document.getElementById("salePrice");
+    const discountPercentageInput = document.getElementById("discountPercentage");
     let PRODUCTS = [];
     let ORDERS = [];
     let currentOrderId = null;
@@ -1528,6 +1562,27 @@
       };
       reader.readAsDataURL(file);
     });
+
+    function syncSalePriceFromDiscount() {
+      const regularPrice = Number(priceInput.value || 0);
+      const discount = Number(discountPercentageInput.value || 0);
+
+      if (!regularPrice || !discount) return;
+      saleCheckbox.checked = true;
+      salePriceInput.value = (regularPrice * (1 - discount / 100)).toFixed(2);
+    }
+
+    function syncDiscountFromSalePrice() {
+      const regularPrice = Number(priceInput.value || 0);
+      const salePrice = Number(salePriceInput.value || 0);
+
+      if (!regularPrice || !salePrice || salePrice >= regularPrice) return;
+      saleCheckbox.checked = true;
+      discountPercentageInput.value = (((regularPrice - salePrice) / regularPrice) * 100).toFixed(2);
+    }
+
+    discountPercentageInput.addEventListener("input", syncSalePriceFromDiscount);
+    salePriceInput.addEventListener("input", syncDiscountFromSalePrice);
 
     function showAdminApp() {
       adminLogin.classList.add("hidden");
@@ -1727,6 +1782,41 @@
       return match ? match[1] : "50ml";
     }
 
+    function productOriginalPrice(product) {
+      return Number(product.original_price || product.price || 0);
+    }
+
+    function productSalePrice(product) {
+      return Number(product.sale_price || product.price || 0);
+    }
+
+    function productDiscount(product) {
+      const original = productOriginalPrice(product);
+      const salePrice = productSalePrice(product);
+      const storedDiscount = Number(product.discount_percentage || 0);
+
+      if (storedDiscount > 0) return Math.round(storedDiscount);
+      if (original > 0 && salePrice < original) return Math.round(((original - salePrice) / original) * 100);
+      return 0;
+    }
+
+    function productPriceHtml(product) {
+      const isSale = product.sale === true || product.sale === 1;
+      const original = productOriginalPrice(product);
+      const salePrice = productSalePrice(product);
+      const discount = productDiscount(product);
+
+      if (!isSale) {
+        return `<span>RM${original}</span>`;
+      }
+
+      return `
+        <span class="stock-price-old">RM${original}</span>
+        <span class="stock-price-sale">RM${salePrice}</span>
+        <span class="stock-discount">${discount}% off</span>
+      `;
+    }
+
     function formatScent(scent) {
       const names = {
         musk: "Musk",
@@ -1780,7 +1870,8 @@
               <p class="stock-type">${product.type}</p>
               <p class="stock-type">${formatScent(product.scent)} / ${formatAudience(product.category)}</p>
               <p class="stock-rating">${renderStars(product.rating)}</p>
-              <p class="stock-meta">${productMl(product)}<br>RM${product.price}</p>
+              <p class="stock-meta">${productMl(product)}</p>
+              <div class="stock-price-stack">${productPriceHtml(product)}</div>
               <p class="stock-left" id="stock-left-${product.id}">${stock} left</p>
               <div class="stock-controls">
                 <button class="pill-btn" onclick="updateStock('${product.id}')">Update Stock</button>
@@ -2210,6 +2301,9 @@
         type: `${document.getElementById("perfumeType").value} (${document.getElementById("volumeMl").value}ml)`,
         description: document.getElementById("description").value,
         price: document.getElementById("price").value,
+        original_price: document.getElementById("price").value,
+        sale_price: document.getElementById("salePrice").value,
+        discount_percentage: document.getElementById("discountPercentage").value,
         stock: document.getElementById("stock").value,
         rating: document.getElementById("rating").value,
         image: selectedImage,
@@ -2241,6 +2335,8 @@
         productForm.reset();
         document.getElementById("stock").value = 10;
         document.getElementById("volumeMl").value = 50;
+        document.getElementById("salePrice").value = "";
+        document.getElementById("discountPercentage").value = "";
         uploadedImageData = "";
         imageUrlPanel.classList.remove("hidden");
         imageFilePanel.classList.add("hidden");
