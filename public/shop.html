@@ -1117,6 +1117,13 @@
       renderProducts(searchInput.value);
     });
 
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && searchInput.value.trim()) {
+        event.preventDefault();
+        window.location.href = `shop.html?q=${encodeURIComponent(searchInput.value.trim())}`;
+      }
+    });
+
     const aiChatButton = document.getElementById("aiChatButton");
     const chatWidget = document.getElementById("chatWidget");
     const chatClose = document.getElementById("chatClose");
