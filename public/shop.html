@@ -354,6 +354,31 @@
       margin-top: 1px;
     }
 
+    .product-price.sale-price {
+      display: grid;
+      gap: 2px;
+      justify-items: center;
+    }
+
+    .product-price-old {
+      color: #777;
+      text-decoration: line-through;
+      font-size: 15px;
+    }
+
+    .product-price-new {
+      color: #b62d2d;
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    .discount-badge {
+      color: #0a7f41;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
     .btn-cart {
       width: 194px;
       height: 39px;
@@ -863,6 +888,43 @@
         .replace(/'/g, "&#039;");
     }
 
+    function productOriginalPrice(product) {
+      return Number(product.original_price || product.price || 0);
+    }
+
+    function productSalePrice(product) {
+      return Number(product.sale_price || product.price || 0);
+    }
+
+    function productDiscount(product) {
+      const original = productOriginalPrice(product);
+      const salePrice = productSalePrice(product);
+      const storedDiscount = Number(product.discount_percentage || 0);
+
+      if (storedDiscount > 0) return Math.round(storedDiscount);
+      if (original > 0 && salePrice < original) return Math.round(((original - salePrice) / original) * 100);
+      return 0;
+    }
+
+    function productPriceHtml(product) {
+      const isSale = product.sale === true || product.sale === 1;
+      const original = productOriginalPrice(product);
+      const salePrice = productSalePrice(product);
+      const discount = productDiscount(product);
+
+      if (!isSale) {
+        return `<div class="product-price">RM${escapeHtml(original)}</div>`;
+      }
+
+      return `
+        <div class="product-price sale-price">
+          <span class="product-price-old">RM${escapeHtml(original)}</span>
+          <span class="product-price-new">RM${escapeHtml(salePrice)}</span>
+          <span class="discount-badge">${escapeHtml(discount)}% off</span>
+        </div>
+      `;
+    }
+
     async function apiFetch(path, options) {
       if (window.location.protocol !== "file:") {
         return fetch(path, options);
@@ -1016,7 +1078,6 @@
         const productImage = product.image || "https://via.placeholder.com/300x300?text=No+Image";
         const productName = product.name || "Unnamed Product";
         const productType = product.type || "No type";
-        const productPrice = product.price || 0;
         const productDescription = product.description || `${productName} is a ${productType} fragrance with a ${product.scent || "signature"} scent profile.`;
         const detailUrl = `product.html?id=${encodeURIComponent(product.id)}`;
         const stock = Number(product.stock ?? 0);
@@ -1036,7 +1097,7 @@
             <div class="product-info">
               <a class="product-name" href="${detailUrl}">${escapeHtml(productName)}</a>
               <div class="product-type">${escapeHtml(productType)}</div>
-              <div class="product-price">RM${escapeHtml(productPrice)}</div>
+              ${productPriceHtml(product)}
               <div class="product-stock ${inStock ? "" : "out"}">${inStock ? `${stock} in stock` : "Out of stock"}</div>
               <button class="btn-cart" onclick="addToCart('${product.id}', this)" ${inStock ? "" : "disabled"}>
                 ${inStock ? "Add to cart" : "Out of stock"}
@@ -1081,12 +1142,13 @@
       if (existing) {
         existing.qty = Number(existing.qty || existing.quantity || 0) + 1;
         existing.quantity = existing.qty;
+        existing.price = productSalePrice(product);
       } else {
         cart.push({
           id: product.id,
           name: product.name,
           type: product.type,
-          price: product.price,
+          price: productSalePrice(product),
           img: product.image,
           qty: 1,
           quantity: 1
