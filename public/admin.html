@@ -1266,7 +1266,7 @@
             <input type="number" id="discountPercentage" placeholder="20" min="0" max="100" step="0.01" />
 
             <label for="stock">Stock</label>
-            <input type="number" id="stock" placeholder="67" value="10" required />
+            <input type="number" id="stock" placeholder="67" value="10" min="0" step="1" required />
 
             <label for="rating">Rating</label>
             <select id="rating">
@@ -1482,6 +1482,11 @@
     function setLoginMessage(text, type = "error") {
       loginError.textContent = text;
       loginError.className = type === "success" ? "login-error success" : "login-error";
+    }
+
+    function setProductMessage(text, type = "error") {
+      message.textContent = text;
+      message.className = `message ${type}`;
     }
 
     function getLockoutUntil() {
@@ -2424,10 +2429,47 @@
       event.preventDefault();
       const selectedImage =
         getImageSource() === "url" ? imageUrlInput.value.trim() : uploadedImageData;
+      const volumeMl = Number(document.getElementById("volumeMl").value);
+      const price = Number(document.getElementById("price").value);
+      const salePriceRaw = document.getElementById("salePrice").value.trim();
+      const discountRaw = document.getElementById("discountPercentage").value.trim();
+      const stockRaw = document.getElementById("stock").value.trim();
+      const salePrice = salePriceRaw ? Number(salePriceRaw) : null;
+      const discountPercentage = discountRaw ? Number(discountRaw) : null;
+      const stock = Number(stockRaw);
+
+      if (!Number.isFinite(volumeMl) || volumeMl <= 0) {
+        setProductMessage("Volume must be greater than 0.");
+        document.getElementById("volumeMl").focus();
+        return;
+      }
+
+      if (!Number.isFinite(price) || price <= 0) {
+        setProductMessage("Regular price must be greater than 0.");
+        document.getElementById("price").focus();
+        return;
+      }
+
+      if (salePriceRaw && (!Number.isFinite(salePrice) || salePrice < 0)) {
+        setProductMessage("Sale price must be 0 or above.");
+        document.getElementById("salePrice").focus();
+        return;
+      }
+
+      if (discountRaw && (!Number.isFinite(discountPercentage) || discountPercentage < 0 || discountPercentage > 100)) {
+        setProductMessage("Discount must be between 0 and 100.");
+        document.getElementById("discountPercentage").focus();
+        return;
+      }
+
+      if (!stockRaw || !Number.isInteger(stock) || stock < 0) {
+        setProductMessage("Stock quantity must be a whole number, 0 or above.");
+        document.getElementById("stock").focus();
+        return;
+      }
 
       if (!selectedImage) {
-        message.textContent = "Please add a product image by URL or upload.";
-        message.className = "message error";
+        setProductMessage("Please add a product image by URL or upload.");
         return;
       }
 
@@ -2436,14 +2478,14 @@
         category: document.getElementById("category").value,
         scent: document.getElementById("scent").value,
         perfume_type: document.getElementById("perfumeType").value,
-        volume_ml: document.getElementById("volumeMl").value,
+        volume_ml: volumeMl,
         type: `${document.getElementById("perfumeType").value} (${document.getElementById("volumeMl").value}ml)`,
         description: document.getElementById("description").value,
-        price: document.getElementById("price").value,
-        original_price: document.getElementById("price").value,
-        sale_price: document.getElementById("salePrice").value,
-        discount_percentage: document.getElementById("discountPercentage").value,
-        stock: document.getElementById("stock").value,
+        price,
+        original_price: price,
+        sale_price: salePriceRaw,
+        discount_percentage: discountRaw,
+        stock,
         rating: document.getElementById("rating").value,
         image: selectedImage,
         sale: document.getElementById("sale").checked
@@ -2460,13 +2502,11 @@
         }));
 
         if (!response.ok) {
-          message.textContent = result.message || "Failed to add product.";
-          message.className = "message error";
+          setProductMessage(result.message || "Failed to add product.");
           return;
         }
 
-        message.textContent = "Product added successfully.";
-        message.className = "message success";
+        setProductMessage("Product added successfully.", "success");
         productForm.reset();
         document.getElementById("stock").value = 10;
         document.getElementById("volumeMl").value = 50;
