@@ -1540,13 +1540,6 @@
       }));
     }
 
-    function mergeOrders(databaseOrders, localOrders) {
-      const merged = new Map();
-      localOrders.forEach(order => merged.set(String(order.id), order));
-      databaseOrders.forEach(order => merged.set(String(order.id), order));
-      return Array.from(merged.values());
-    }
-
     document.querySelectorAll(".tab-btn").forEach(button => {
       button.addEventListener("click", () => showPanel(button.dataset.panel));
     });
@@ -1774,7 +1767,6 @@
 
     function saveOrders(orders) {
       ORDERS = orders;
-      localStorage.setItem("scentique_orders", JSON.stringify(orders));
     }
 
     function normalizeOrderStatus(status, paid = false) {
@@ -1838,7 +1830,8 @@
             qty: Number(item.quantity || 1)
           }))
         }));
-        ORDERS = mergeOrders(databaseOrders, localOrders);
+        ORDERS = databaseOrders;
+        localStorage.removeItem("scentique_orders");
       } catch (error) {
         apiFailed = true;
         ORDERS = localOrders;
