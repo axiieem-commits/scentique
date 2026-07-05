@@ -838,6 +838,7 @@ let appliedVoucher = null;
 let paymentProofData = "";
 let paymentProofLoading = false;
 let orderSubmitting = false;
+let stockSyncPromise = null;
 
 function getApiUrl(path) {
   return window.location.protocol === 'file:' ? `http://127.0.0.1:3000${path}` : path;
@@ -875,6 +876,33 @@ function requireCustomerLogin(message = 'Please login first before checkout.') {
     window.location.href = `Login.html?next=${encodeURIComponent('cart.html')}`;
   }, 700);
   return null;
+}
+
+function itemStock(item) {
+  const stock = Number(item.stock);
+  return Number.isInteger(stock) ? stock : null;
+}
+
+async function syncCartStock() {
+  try {
+    const response = await apiFetch('/api/products');
+    if (!response.ok) return;
+    const products = await response.json();
+    const productMap = new Map(products.map(product => [String(product.id), product]));
+    const syncedItems = Cart.get().map(item => {
+      const product = productMap.get(String(item.id));
+      if (!product) return item;
+      return {
+        ...item,
+        stock: Number(product.stock || 0),
+        price: Number(product.sale_price || product.price || item.price),
+        img: product.image || item.img
+      };
+    });
+    Cart.save(syncedItems);
+  } catch (error) {
+    // Checkout still validates live stock on the server.
+  }
 }
 
 function renderCart() {
@@ -948,6 +976,14 @@ function renderSummary() {
 }
 
 function changeQty(id, qty) {
+  const item = Cart.get().find(cartItem => String(cartItem.id) === String(id));
+  const stock = item ? itemStock(item) : null;
+
+  if (stock !== null && qty > stock) {
+    Toast.show(`Only ${stock} item(s) available in stock.`, 'error');
+    return;
+  }
+
   Cart.updateQty(id, qty);
   renderCart();
 }
@@ -1001,11 +1037,26 @@ async function applyVoucher() {
   }
 }
 
-function openCheckout() {
-  const items = Cart.get();
+async function openCheckout() {
+  let items = Cart.get();
   if (!items.length) return;
   const user = requireCustomerLogin('Please login first before checkout and payment.');
   if (!user) return;
+
+  if (stockSyncPromise) await stockSyncPromise;
+  items = Cart.get();
+  if (!items.length) return;
+
+  const unavailableItem = Cart.get().find(item => {
+    const stock = itemStock(item);
+    return stock !== null && Number(item.qty || item.quantity || 1) > stock;
+  });
+
+  if (unavailableItem) {
+    Toast.show(`Only ${itemStock(unavailableItem)} ${unavailableItem.name} item(s) available in stock.`, 'error');
+    renderCart();
+    return;
+  }
 
   const subtotal = Cart.total();
   const shipping = subtotal > 150 ? 0 : 8;
@@ -1148,14 +1199,15 @@ async function placeOrder() {
       })
     });
 
+    const result = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-      throw new Error('Failed to save order to database.');
+      throw new Error(result.message || 'Failed to save order to database.');
     }
 
-    const result = await response.json().catch(() => ({}));
     if (result.order_id) savedOrderId = result.order_id;
   } catch (error) {
-    Toast.show('Order could not be saved. Please make sure npm start is running.', 'error');
+    Toast.show(error.message || 'Order could not be saved. Please make sure npm start is running.', 'error');
     orderSubmitting = false;
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'Place Order';
@@ -1176,6 +1228,10 @@ async function placeOrder() {
   placeOrderBtn.textContent = 'Place Order';
 }
 
+stockSyncPromise = syncCartStock().finally(() => {
+  stockSyncPromise = null;
+  renderCart();
+});
 renderCart();
 </script>
 </body>
