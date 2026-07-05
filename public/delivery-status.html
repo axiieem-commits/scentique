@@ -52,7 +52,7 @@
       margin: 0 auto;
       border: 2px solid #777;
       background: #fff;
-      padding: 34px 44px;
+      padding: 34px 38px;
       position: relative;
     }
 
@@ -74,11 +74,16 @@
 
     .step {
       display: grid;
-      grid-template-columns: 58px 1fr;
-      gap: 24px;
+      grid-template-columns: 58px minmax(0, 1fr);
+      gap: 28px;
       align-items: center;
       position: relative;
       z-index: 1;
+    }
+
+    .step-body {
+      min-width: 0;
+      text-align: left;
     }
 
     .step-icon {
@@ -113,6 +118,7 @@
       font-size: 20px;
       font-weight: 500;
       line-height: 1.35;
+      margin: 0;
     }
 
     .step small {
@@ -120,6 +126,9 @@
       margin-top: 6px;
       color: #777;
       font-size: 13px;
+      line-height: 1.35;
+      max-width: 220px;
+      overflow-wrap: anywhere;
     }
 
     .status-actions {
@@ -184,7 +193,7 @@
       }
 
       .timeline-card {
-        padding: 30px 24px;
+        padding: 30px 22px;
       }
 
       .timeline {
@@ -193,7 +202,7 @@
 
       .step {
         grid-template-columns: 50px 1fr;
-        gap: 18px;
+        gap: 20px;
       }
 
       .step-icon {
@@ -203,6 +212,10 @@
 
       .timeline::before {
         left: 25px;
+      }
+
+      .step small {
+        max-width: none;
       }
 
       .status-actions {
@@ -304,6 +317,13 @@
 
     function renderStatus(order) {
       const current = statusIndex(order);
+      const paymentTitle = order.paymentStatus === "Rejected" ? "Payment rejected" : order.paid ? "Paid" : "Unpaid";
+      const paymentText = order.paymentStatus === "Rejected"
+        ? "Please contact Scentique support."
+        : order.paid
+          ? "Payment approved"
+          : "Waiting for admin approval";
+
       document.getElementById("statusContent").innerHTML = `
         <div class="status-heading">
           <h1>Delivery status</h1>
@@ -318,9 +338,9 @@
                   <path d="M20 6 9 17l-5-5"></path>
                 </svg>
               </div>
-              <div>
-                <h2>Unpaid</h2>
-                <small>${order.paymentStatus === "Rejected" ? "Payment rejected. Please contact Scentique support." : order.paid ? "Payment approved" : "Receipt uploaded, waiting for admin approval"}</small>
+              <div class="step-body">
+                <h2>${paymentTitle}</h2>
+                <small>${paymentText}</small>
               </div>
             </article>
 
@@ -333,8 +353,10 @@
                   <circle cx="17" cy="18" r="1.8"></circle>
                 </svg>
               </div>
-              <h2>Processing</h2>
-              <small>Admin is preparing your perfume for courier pickup</small>
+              <div class="step-body">
+                <h2>Processing</h2>
+                <small>Preparing your perfume for courier pickup</small>
+              </div>
             </article>
 
             <article class="step ${stepClass(2, current)}">
@@ -348,8 +370,10 @@
                   <circle cx="18" cy="18" r="2"></circle>
                 </svg>
               </div>
-              <h2>Shipped</h2>
-              <small>${order.trackingNumber ? `J&T airway bill: ${order.trackingNumber}` : "Waiting for courier airway bill"}</small>
+              <div class="step-body">
+                <h2>Shipped</h2>
+                <small>${order.trackingNumber ? `J&T airway bill: ${order.trackingNumber}` : "Waiting for airway bill"}</small>
+              </div>
             </article>
 
             <article class="step ${stepClass(3, current)}">
@@ -359,7 +383,10 @@
                   <path d="m8 12 2.5 2.5L16 9"></path>
                 </svg>
               </div>
-              <h2>Delivered</h2>
+              <div class="step-body">
+                <h2>Delivered</h2>
+                <small>Order completed</small>
+              </div>
             </article>
           </div>
         </section>
