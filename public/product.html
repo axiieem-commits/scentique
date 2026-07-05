@@ -752,6 +752,7 @@
         existing.qty = Number(existing.qty || existing.quantity || 0) + quantity;
         existing.quantity = existing.qty;
         existing.price = productSalePrice(currentProduct);
+        existing.stock = stock;
       } else {
         cart.push({
           id: currentProduct.id,
@@ -759,6 +760,7 @@
           type: currentProduct.type || `${getPerfumeType(currentProduct)} (${getVolume(currentProduct)})`,
           price: productSalePrice(currentProduct),
           img: currentProduct.image,
+          stock,
           qty: quantity,
           quantity
         });
