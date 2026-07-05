@@ -50,6 +50,12 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || "").trim());
 }
 
+function normalizeWholeNumber(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isInteger(number) ? number : null;
+}
+
 async function ensureDefaultAdmin() {
   const [admins] = await db.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
   if (admins.length > 0) return;
@@ -610,12 +616,32 @@ app.post("/api/products", async (req, res) => {
       image,
       sale
     } = req.body;
-    const productType = type || `${perfume_type || "Eau de Parfum"} (${Number(volume_ml) || 50}ml)`;
+    const normalizedVolume = Number(volume_ml) || 50;
+    const productType = type || `${perfume_type || "Eau de Parfum"} (${normalizedVolume}ml)`;
     const pricing = normalizeProductPricing({ price, original_price, sale_price, discount_percentage, sale });
+    const normalizedStock = normalizeWholeNumber(stock);
 
     if (!name || !category || !productType || !pricing.price || !image) {
       return res.status(400).json({
         message: "Please fill in all required fields."
+      });
+    }
+
+    if (!Number.isFinite(normalizedVolume) || normalizedVolume <= 0) {
+      return res.status(400).json({
+        message: "Volume must be greater than 0."
+      });
+    }
+
+    if (!Number.isFinite(pricing.price) || pricing.price <= 0) {
+      return res.status(400).json({
+        message: "Regular price must be greater than 0."
+      });
+    }
+
+    if (normalizedStock === null || normalizedStock < 0) {
+      return res.status(400).json({
+        message: "Stock quantity must be a whole number, 0 or above."
       });
     }
 
@@ -630,14 +656,14 @@ app.post("/api/products", async (req, res) => {
       category,
       scent || "fresh",
       perfume_type || "Eau de Parfum",
-      Number(volume_ml) || 50,
+      normalizedVolume,
       productType,
       description || null,
       pricing.price,
       pricing.originalPrice,
       pricing.salePrice,
       pricing.discountPercentage,
-      Number(stock) || 0,
+      normalizedStock,
       Number(rating) || 5,
       image,
       pricing.sale
@@ -654,14 +680,14 @@ app.post("/api/products", async (req, res) => {
         category,
         scent: scent || "fresh",
         perfume_type: perfume_type || "Eau de Parfum",
-        volume_ml: Number(volume_ml) || 50,
+        volume_ml: normalizedVolume,
         type: productType,
         description: description || null,
         price: pricing.price,
         original_price: pricing.originalPrice,
         sale_price: pricing.salePrice,
         discount_percentage: pricing.discountPercentage,
-        stock: Number(stock) || 0,
+        stock: normalizedStock,
         rating: Number(rating) || 5,
         image,
         sale: pricing.sale
@@ -707,7 +733,7 @@ app.patch("/api/products/:id", async (req, res) => {
     const pricing = hasPricingUpdate
       ? normalizeProductPricing({ price, original_price, sale_price, discount_percentage, sale })
       : null;
-    const normalizedStock = stock !== undefined ? Number(stock) : null;
+    const normalizedStock = stock !== undefined ? normalizeWholeNumber(stock) : null;
 
     if (stock !== undefined && (!Number.isInteger(normalizedStock) || normalizedStock < 0)) {
       return res.status(400).json({
@@ -1054,8 +1080,61 @@ app.post("/api/orders", async (req, res) => {
 
     await connection.beginTransaction();
 
-    const calculatedTotal = items.reduce((sum, item) => {
-      return sum + Number(item.price || 0) * Number(item.quantity || item.qty || 1);
+    const orderItems = [];
+
+    for (const item of items) {
+      const productId = item.product_id || item.id;
+      const quantity = normalizeWholeNumber(item.quantity || item.qty || 1);
+      const price = Number(item.price || 0);
+
+      if (!productId || quantity === null || quantity <= 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          message: "Each order item must have a valid product and quantity."
+        });
+      }
+
+      if (!Number.isFinite(price) || price < 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          message: "Each order item must have a valid price."
+        });
+      }
+
+      const [productRows] = await connection.query(
+        "SELECT id, name, type, stock FROM products WHERE id = ? LIMIT 1 FOR UPDATE",
+        [productId]
+      );
+
+      if (productRows.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          message: `${item.name || "This product"} is no longer available.`
+        });
+      }
+
+      const product = productRows[0];
+      const availableStock = Number(product.stock || 0);
+
+      if (quantity > availableStock) {
+        await connection.rollback();
+        return res.status(400).json({
+          message: `Only ${availableStock} ${product.name} item(s) available in stock.`
+        });
+      }
+
+      orderItems.push({
+        ...item,
+        productId,
+        quantity,
+        price,
+        productName: item.product_name || item.name || product.name,
+        productType: item.product_type || item.type || product.type
+      });
+    }
+
+    const calculatedTotal = orderItems.reduce((sum, item) => {
+      return sum + item.price * item.quantity;
     }, 0);
     let appliedVoucherId = voucher_id || null;
 
@@ -1090,30 +1169,25 @@ app.post("/api/orders", async (req, res) => {
 
     const orderId = orderResult.insertId;
 
-    for (const item of items) {
-      const quantity = Number(item.quantity || item.qty || 1);
-      const price = Number(item.price || 0);
-
+    for (const item of orderItems) {
       await connection.query(
         `INSERT INTO order_items
           (order_id, product_id, product_name, product_type, quantity, price)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
           orderId,
-          item.product_id || item.id || null,
-          item.product_name || item.name || null,
-          item.product_type || item.type || null,
-          quantity,
-          price
+          item.productId,
+          item.productName,
+          item.productType,
+          item.quantity,
+          item.price
         ]
       );
 
-      if (item.product_id || item.id) {
-        await connection.query(
-          "UPDATE products SET stock = GREATEST(stock - ?, 0) WHERE id = ?",
-          [quantity, item.product_id || item.id]
-        );
-      }
+      await connection.query(
+        "UPDATE products SET stock = stock - ? WHERE id = ?",
+        [item.quantity, item.productId]
+      );
     }
 
     await connection.query(
