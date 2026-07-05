@@ -1150,6 +1150,7 @@
         existing.qty = Number(existing.qty || existing.quantity || 0) + 1;
         existing.quantity = existing.qty;
         existing.price = productSalePrice(product);
+        existing.stock = stock;
       } else {
         cart.push({
           id: product.id,
@@ -1157,6 +1158,7 @@
           type: product.type,
           price: productSalePrice(product),
           img: product.image,
+          stock,
           qty: 1,
           quantity: 1
         });
