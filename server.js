@@ -707,6 +707,13 @@ app.patch("/api/products/:id", async (req, res) => {
     const pricing = hasPricingUpdate
       ? normalizeProductPricing({ price, original_price, sale_price, discount_percentage, sale })
       : null;
+    const normalizedStock = stock !== undefined ? Number(stock) : null;
+
+    if (stock !== undefined && (!Number.isInteger(normalizedStock) || normalizedStock < 0)) {
+      return res.status(400).json({
+        message: "Stock must be a whole number, 0 or above."
+      });
+    }
 
     const sql = `
       UPDATE products
@@ -743,7 +750,7 @@ app.patch("/api/products/:id", async (req, res) => {
       pricing ? pricing.salePrice : null,
       hasPricingUpdate ? 1 : 0,
       pricing ? pricing.discountPercentage : null,
-      stock !== undefined ? Number(stock) : null,
+      normalizedStock,
       rating !== undefined ? Number(rating) : null,
       image ?? null,
       pricing ? pricing.sale : null,
