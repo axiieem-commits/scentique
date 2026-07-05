@@ -1162,31 +1162,6 @@ async function placeOrder() {
     return;
   }
 
-  const orders = JSON.parse(localStorage.getItem('scentique_orders') || '[]');
-  const today = new Date();
-  orders.unshift({
-    id: Number(savedOrderId),
-    user_id: user.id,
-    userId: user.id,
-    date: today.toLocaleDateString('en-GB'),
-    customer: name,
-    phone,
-    address: addr,
-    postcode,
-    city,
-    state,
-    status: 'Unpaid',
-    paid: false,
-    paymentProofUploaded: true,
-    items: items.map(item => ({
-      name: item.name,
-      type: item.type,
-      price: Number(item.price),
-      qty: Number(item.qty || item.quantity || 1)
-    }))
-  });
-  localStorage.setItem('scentique_orders', JSON.stringify(orders));
-  console.log('Saved Scentique order backup:', orders[0]);
   // Clear cart and show success
   Cart.save([]);
   appliedVoucher = null;
