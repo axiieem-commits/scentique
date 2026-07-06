@@ -86,6 +86,19 @@ const Auth = {
     localStorage.setItem('scentique_session', JSON.stringify(user));
     return { ok: true, user };
   },
+  resetPassword(username, email, password) {
+    const users = JSON.parse(localStorage.getItem('scentique_users') || '[]');
+    const idx = users.findIndex(user =>
+      String(user.username || '').toLowerCase() === String(username || '').trim().toLowerCase() &&
+      String(user.email || '').toLowerCase() === String(email || '').trim().toLowerCase()
+    );
+
+    if (idx === -1) return { ok: false, msg: 'No customer account matches that username and email.' };
+
+    users[idx].password = password;
+    localStorage.setItem('scentique_users', JSON.stringify(users));
+    return { ok: true };
+  },
   logout() {
     localStorage.removeItem('scentique_session');
     window.location.href = './';
