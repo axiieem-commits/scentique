@@ -500,7 +500,7 @@
       <a href="shop.html?sale=1">Sale</a>
     </div>
 
-    <a href="index.html" class="nav-logo">Scentique</a>
+    <a href="./" class="nav-logo">Scentique</a>
 
     <div class="nav-right">
       <button class="nav-search" id="openSearch">
@@ -537,7 +537,7 @@
   </nav>
 
   <div class="breadcrumb">
-    <a href="index.html">Home</a>
+    <a href="./">Home</a>
     <span>/</span>
     <a href="shop.html" data-cat="all">All</a>
     <span>/</span>
@@ -600,6 +600,53 @@
         badge.textContent = count > 99 ? "99+" : count;
         badge.classList.toggle("show", count > 0);
       });
+    }
+
+    function setCartItems(items) {
+      const normalizedItems = (items || []).map(item => ({
+        ...item,
+        id: item.id || item.product_id,
+        qty: Number(item.qty ?? item.quantity ?? 1),
+        quantity: Number(item.quantity ?? item.qty ?? 1),
+        price: Number(item.price || 0),
+        stock: Number(item.stock ?? 0),
+        img: item.img || item.image || ""
+      }));
+      localStorage.setItem("scentique_cart", JSON.stringify(normalizedItems));
+      syncCartBadge();
+    }
+
+    async function loadDatabaseCart() {
+      const user = getCurrentUser();
+      if (!user?.id) return;
+      const localItems = JSON.parse(localStorage.getItem("scentique_cart") || "[]");
+
+      try {
+        const response = await apiFetch(`/api/cart?user_id=${encodeURIComponent(user.id)}`);
+        if (!response.ok) throw new Error("Failed to load cart.");
+        const data = await response.json();
+        let databaseItems = data.items || [];
+
+        if (!databaseItems.length && localItems.length) {
+          for (const item of localItems) {
+            const productId = item.id || item.product_id;
+            const quantity = Number(item.qty ?? item.quantity ?? 1);
+            if (!productId || quantity <= 0) continue;
+
+            const addResponse = await apiFetch("/api/cart/items", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: user.id, product_id: productId, quantity })
+            });
+            const addData = await addResponse.json().catch(() => ({}));
+            if (addResponse.ok) databaseItems = addData.items || databaseItems;
+          }
+        }
+
+        setCartItems(databaseItems);
+      } catch (error) {
+        syncCartBadge();
+      }
     }
 
     function getCurrentUser() {
@@ -728,9 +775,10 @@
       document.getElementById("qtyValue").textContent = quantity;
     }
 
-    function addCurrentProductToCart() {
+    async function addCurrentProductToCart() {
       if (!currentProduct) return;
       if (!requireCustomerLogin()) return;
+      const user = getCurrentUser();
 
       const stock = Number(currentProduct.stock ?? 0);
 
@@ -748,26 +796,24 @@
         return;
       }
 
-      if (existing) {
-        existing.qty = Number(existing.qty || existing.quantity || 0) + quantity;
-        existing.quantity = existing.qty;
-        existing.price = productSalePrice(currentProduct);
-        existing.stock = stock;
-      } else {
-        cart.push({
-          id: currentProduct.id,
-          name: currentProduct.name,
-          type: currentProduct.type || `${getPerfumeType(currentProduct)} (${getVolume(currentProduct)})`,
-          price: productSalePrice(currentProduct),
-          img: currentProduct.image,
-          stock,
-          qty: quantity,
-          quantity
+      try {
+        const response = await apiFetch("/api/cart/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            product_id: currentProduct.id,
+            quantity
+          })
         });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Failed to add item to cart.");
+        setCartItems(data.items || []);
+      } catch (error) {
+        alert(error.message || "Failed to add item to cart.");
+        return;
       }
 
-      localStorage.setItem("scentique_cart", JSON.stringify(cart));
-      syncCartBadge();
       const button = document.querySelector(".btn-cart");
       button.textContent = "Added ✓";
       setTimeout(() => {
@@ -823,6 +869,7 @@
     });
 
     loadProduct();
+    loadDatabaseCart();
     syncCartBadge();
   </script>
 </body>
