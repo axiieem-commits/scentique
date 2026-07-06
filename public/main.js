@@ -60,12 +60,22 @@ const Cart = {
 /* ── AUTH STORE ── */
 const Auth = {
   register(username, email, password) {
+    const normalizedUsername = String(username || '').trim();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || '').trim())) {
       return { ok: false, msg: 'Please enter a valid email address.' };
     }
+
     const users = JSON.parse(localStorage.getItem('scentique_users') || '[]');
-    if (users.find(u => u.email === email)) return { ok: false, msg: 'Email already registered.' };
-    users.push({ username, email, password });
+    if (users.find(u => String(u.email || '').toLowerCase() === normalizedEmail)) {
+      return { ok: false, msg: 'Email already registered.' };
+    }
+    if (users.find(u => String(u.username || '').toLowerCase() === normalizedUsername.toLowerCase())) {
+      return { ok: false, msg: 'Username already taken.' };
+    }
+
+    users.push({ username: normalizedUsername, email: normalizedEmail, password });
     localStorage.setItem('scentique_users', JSON.stringify(users));
     return { ok: true };
   },
@@ -78,7 +88,7 @@ const Auth = {
   },
   logout() {
     localStorage.removeItem('scentique_session');
-    window.location.href = 'index.html';
+    window.location.href = './';
   },
   current() {
     return JSON.parse(localStorage.getItem('scentique_session') || 'null');
