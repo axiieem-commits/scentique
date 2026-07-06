@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scentique — Blooming with Confidence</title>
-  <link rel="stylesheet" href="Style.css" />
+  <link rel="stylesheet" href="style.css" />
   <style>
     /* ── INDEX-SPECIFIC ── */
     body { overflow-x: hidden; }
@@ -321,8 +321,8 @@
     .feature-title { color: white; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
     .feature-desc { color: #888; font-size: 12px; line-height: 1.5; }
 
-    /* TESTIMONIALS */
-    .testimonials-section {
+    /* SCENTIQUE PROMISE */
+    .promise-section {
       padding: 80px 32px;
       background: linear-gradient(180deg, #fce8f4, #f8d0e8);
     }
@@ -335,26 +335,26 @@
     }
     .section-title em { font-style: italic; color: var(--pink-deep); }
 
-    .testimonials-grid {
+    .promise-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 24px;
       max-width: 1000px;
       margin: 0 auto;
     }
-    .testimonial-card {
+    .promise-card {
       background: white;
       border-radius: var(--radius);
       padding: 28px 24px;
       box-shadow: var(--shadow);
     }
-    .testimonial-name {
+    .promise-label {
       font-weight: 700;
       font-size: 15px;
       margin-bottom: 8px;
       color: var(--black);
     }
-    .testimonial-text {
+    .promise-text {
       font-size: 13px;
       line-height: 1.7;
       color: var(--grey);
@@ -381,7 +381,7 @@
       .define-brand-bg { bottom: -18px; letter-spacing: -4px; }
       .features-strip { grid-template-columns: 1fr; }
       .feature-item { border-right: none; border-bottom: 1px solid #222; }
-      .testimonials-grid { grid-template-columns: 1fr; }
+      .promise-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 460px) {
@@ -419,7 +419,7 @@
     <a href="shop.html">Shop</a>
     <a href="shop.html?sale=1">Sale</a>
   </div>
-  <a class="nav-logo" href="index.html">Scentique</a>
+  <a class="nav-logo" href="./">Scentique</a>
   <div class="nav-right">
     <button class="nav-search open-search" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);border-radius:20px;padding:6px 14px;color:white;display:flex;align-items:center;gap:8px;cursor:pointer;font-family:inherit;font-size:13px;">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -545,24 +545,21 @@
   </div>
 </div>
 
-<!-- TESTIMONIALS -->
-<section class="testimonials-section">
-  <h2 class="section-title">Blooming with <em>brilliant</em> feedback</h2>
-  <div class="testimonials-grid">
-    <div class="testimonial-card">
-      <div class="testimonial-name">Sarah L.</div>
-      <div class="stars">★★★★★</div>
-      <p class="testimonial-text">"My wedding fragrance was beyond perfect. Scentique captured exactly what I dreamed of."</p>
+<!-- SCENTIQUE PROMISE -->
+<section class="promise-section">
+  <h2 class="section-title">Made for <em>beautiful</em> everyday moments</h2>
+  <div class="promise-grid">
+    <div class="promise-card">
+      <div class="promise-label">Curated Scents</div>
+      <p class="promise-text">Explore perfumes selected for soft mornings, confident evenings, and every little moment in between.</p>
     </div>
-    <div class="testimonial-card">
-      <div class="testimonial-name">Liam G.</div>
-      <div class="stars">★★★★★</div>
-      <p class="testimonial-text">"Their selection always makes my day. Fresh, beautiful, and delivered right on time."</p>
+    <div class="promise-card">
+      <div class="promise-label">Packed With Care</div>
+      <p class="promise-text">Each order is prepared neatly, protected for delivery, and handled with the same elegance as the fragrance inside.</p>
     </div>
-    <div class="testimonial-card">
-      <div class="testimonial-name">Pat A.</div>
-      <div class="stars">★★★★★</div>
-      <p class="testimonial-text">"From ordering to delivery, everything was smooth. I'll never buy perfume anywhere else."</p>
+    <div class="promise-card">
+      <div class="promise-label">Easy To Follow</div>
+      <p class="promise-text">Track your order progress from payment approval to courier pickup, with clear updates along the way.</p>
     </div>
   </div>
 </section>
