@@ -191,6 +191,11 @@
       display: block;
     }
 
+    .auth-error.success {
+      background: #e8f7ee;
+      color: #1f7a45;
+    }
+
     @media (max-width: 768px) {
       .auth-page {
         grid-template-columns: 1fr;
@@ -226,7 +231,7 @@
   <!-- Minimal navbar -->
   <nav class="navbar solid dark-text" style="position:absolute;">
     <div class="nav-left"></div>
-    <a class="nav-logo" href="index.html" style="color:var(--black);">Scentique</a>
+    <a class="nav-logo" href="./" style="color:var(--black);">Scentique</a>
     <div class="nav-right"></div>
   </nav>
 
@@ -277,6 +282,11 @@
         </div>
 
         <button class="btn btn-pink-full mt-16" onclick="doLogin()">Log In</button>
+
+        <div class="auth-switch">
+          Forgot password?
+          <a href="#" onclick="switchTab('reset'); return false;">Reset it here</a>
+        </div>
 
         <div class="auth-switch">
           New here?
@@ -332,6 +342,54 @@
         </div>
       </div>
 
+      <!-- RESET PASSWORD FORM -->
+      <div class="form-panel" id="panelReset">
+        <h1 class="auth-heading">Reset<br>password</h1>
+        <p class="auth-sub">Enter your username and registered email, then choose a new password.</p>
+
+        <div class="auth-error" id="resetError"></div>
+
+        <div class="form-group">
+          <label for="resetUser">Username</label>
+          <input
+            type="text"
+            id="resetUser"
+            class="form-control"
+            placeholder="Your username"
+            autocomplete="username"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="resetEmail">Registered email</label>
+          <input
+            type="email"
+            id="resetEmail"
+            class="form-control"
+            placeholder="you@example.com"
+            autocomplete="email"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="resetPass">New password</label>
+          <input
+            type="password"
+            id="resetPass"
+            class="form-control"
+            placeholder="Min. 6 characters"
+            autocomplete="new-password"
+          />
+        </div>
+
+        <button class="btn btn-pink-full mt-16" onclick="doResetPassword()">Change Password</button>
+
+        <div class="auth-switch">
+          Remembered it?
+          <a href="#" onclick="switchTab('login'); return false;">Back to sign in</a>
+        </div>
+      </div>
+
       <div class="admin-link">
         Admin? <a href="admin.html">Admin Log In →</a>
       </div>
@@ -345,6 +403,7 @@
     // Check URL param for mode
     const params = new URLSearchParams(location.search);
     if (params.get('mode') === 'register') switchTab('register');
+    if (params.get('mode') === 'reset') switchTab('reset');
 
     // If already logged in with a database account, redirect
     const existingSession = Auth.current();
@@ -356,13 +415,15 @@
     function switchTab(tab) {
       document.getElementById('panelLogin').classList.toggle('active', tab === 'login');
       document.getElementById('panelRegister').classList.toggle('active', tab === 'register');
+      document.getElementById('panelReset').classList.toggle('active', tab === 'reset');
       document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
       document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
     }
 
-    function showError(id, msg) {
+    function showError(id, msg, type = 'error') {
       const el = document.getElementById(id);
       el.textContent = msg;
+      el.classList.toggle('success', type === 'success');
       el.classList.add('show');
       setTimeout(() => el.classList.remove('show'), 4000);
     }
@@ -388,6 +449,10 @@
       window.location.href = next || 'shop.html';
     }
 
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || '').trim());
+    }
+
     async function doLogin() {
       const user = document.getElementById('loginUser').value.trim();
       const pass = document.getElementById('loginPass').value;
@@ -407,6 +472,7 @@
 
         if (!response.ok) {
           showError('loginError', data.message || 'Invalid username or password.');
+          document.getElementById('resetUser').value = user;
           return;
         }
 
@@ -425,6 +491,11 @@
 
       if (!user || !email || !pass) {
         showError('registerError', 'Please fill in all fields.');
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showError('registerError', 'Please enter a valid email address.');
         return;
       }
 
@@ -454,13 +525,68 @@
       }
     }
 
+    async function doResetPassword() {
+      const user = document.getElementById('resetUser').value.trim();
+      const email = document.getElementById('resetEmail').value.trim();
+      const pass = document.getElementById('resetPass').value;
+
+      if (!user || !email || !pass) {
+        showError('resetError', 'Please fill in all fields.');
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showError('resetError', 'Please enter a valid email address.');
+        return;
+      }
+
+      if (pass.length < 6) {
+        showError('resetError', 'New password must be at least 6 characters.');
+        return;
+      }
+
+      try {
+        const response = await apiFetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, email, newPassword: pass })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError('resetError', data.message || 'Password reset failed.');
+          return;
+        }
+
+        document.getElementById('loginUser').value = user;
+        document.getElementById('loginPass').value = '';
+        document.getElementById('resetPass').value = '';
+        switchTab('login');
+        showError('loginError', data.message || 'Password changed. Please sign in with your new password.', 'success');
+      } catch (error) {
+        const result = Auth.resetPassword(user, email, pass);
+        if (!result.ok) {
+          showError('resetError', result.msg || 'Cannot connect to reset password. Please run npm start.');
+          return;
+        }
+
+        document.getElementById('loginUser').value = user;
+        document.getElementById('loginPass').value = '';
+        document.getElementById('resetPass').value = '';
+        switchTab('login');
+        showError('loginError', 'Password changed. Please sign in with your new password.', 'success');
+      }
+    }
+
     // Enter key support
     document.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         if (document.getElementById('panelLogin').classList.contains('active')) {
           doLogin();
-        } else {
+        } else if (document.getElementById('panelRegister').classList.contains('active')) {
           doRegister();
+        } else {
+          doResetPassword();
         }
       }
     });
