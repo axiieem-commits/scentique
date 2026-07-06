@@ -56,30 +56,11 @@ function normalizeWholeNumber(value) {
   return Number.isInteger(number) ? number : null;
 }
 
-async function ensureDefaultAdmin() {
+async function ensureAdminExists() {
   const [admins] = await db.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
   if (admins.length > 0) return;
 
-  const adminName = process.env.ADMIN_USERNAME || "admin";
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@scentique.local";
-  const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
-  const [existingUsers] = await db.query("SELECT id FROM users WHERE email = ? LIMIT 1", [adminEmail]);
-
-  if (existingUsers.length > 0) {
-    await db.query(
-      "UPDATE users SET name = ?, password = ?, role = 'admin' WHERE id = ?",
-      [adminName, hashPassword(adminPassword), existingUsers[0].id]
-    );
-    console.log(`Existing user promoted to default admin: ${adminName} / ${adminEmail}`);
-    return;
-  }
-
-  await db.query(
-    "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'admin')",
-    [adminName, adminEmail, hashPassword(adminPassword)]
-  );
-
-  console.log(`Default admin created in database: ${adminName} / ${adminEmail}`);
+  console.warn("No admin account found in the database. Create an admin user directly in the users table.");
 }
 
 // Create products table automatically
@@ -228,7 +209,7 @@ async function initDatabase() {
   await addColumnIfMissing("vouchers", "active BOOLEAN DEFAULT TRUE");
   await ensureDefaultVouchers();
   await alignVoucherSchema();
-  await ensureDefaultAdmin();
+  await ensureAdminExists();
   console.log("Database tables are ready.");
 }
 
