@@ -34,6 +34,23 @@ async function addColumnIfMissing(table, columnDefinition) {
   }
 }
 
+async function addUniqueIndexIfMissing(table, indexName, columnExpression) {
+  try {
+    await db.query(`ALTER TABLE ${table} ADD UNIQUE KEY ${indexName} (${columnExpression})`);
+  } catch (error) {
+    if (error.code === "ER_DUP_KEYNAME") return;
+
+    if (error.code === "ER_DUP_ENTRY") {
+      console.warn(
+        `Could not add ${indexName}. Remove duplicate usernames in ${table}.${columnExpression} first.`
+      );
+      return;
+    }
+
+    throw error;
+  }
+}
+
 function hashPassword(password) {
   return `sha256:${crypto.createHash("sha256").update(String(password)).digest("hex")}`;
 }
@@ -48,6 +65,10 @@ function verifyPassword(password, storedPassword) {
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || "").trim());
+}
+
+function normalizeUsername(username) {
+  return String(username || "").trim();
 }
 
 function normalizeWholeNumber(value) {
@@ -90,7 +111,7 @@ async function initDatabase() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS users (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
+      name VARCHAR(255) UNIQUE NOT NULL,
       email VARCHAR(255) UNIQUE NOT NULL,
       password VARCHAR(255) NOT NULL,
       phone_number VARCHAR(30),
@@ -207,6 +228,7 @@ async function initDatabase() {
   await addColumnIfMissing("vouchers", "max_redemptions_per_user INT DEFAULT 1");
   await addColumnIfMissing("vouchers", "first_time_only BOOLEAN DEFAULT FALSE");
   await addColumnIfMissing("vouchers", "active BOOLEAN DEFAULT TRUE");
+  await addUniqueIndexIfMissing("users", "unique_username", "name");
   await ensureDefaultVouchers();
   await alignVoucherSchema();
   await ensureAdminExists();
@@ -396,7 +418,7 @@ app.post("/api/admin/forgot-password", async (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const name = String(req.body.username || req.body.name || "").trim();
+    const name = normalizeUsername(req.body.username || req.body.name);
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
     const phoneNumber = String(req.body.phone_number || "").trim() || null;
@@ -418,6 +440,15 @@ app.post("/api/auth/register", async (req, res) => {
       return res.status(409).json({ message: "Email already registered." });
     }
 
+    const [existingUsername] = await db.query(
+      "SELECT id FROM users WHERE LOWER(name) = LOWER(?) LIMIT 1",
+      [name]
+    );
+
+    if (existingUsername.length > 0) {
+      return res.status(409).json({ message: "Username already taken." });
+    }
+
     const [result] = await db.query(
       "INSERT INTO users (name, email, password, phone_number, role) VALUES (?, ?, ?, ?, 'customer')",
       [name, email, hashPassword(password), phoneNumber]
@@ -436,6 +467,9 @@ app.post("/api/auth/register", async (req, res) => {
     });
   } catch (error) {
     console.error("Register error:", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "Username or email already registered." });
+    }
     res.status(500).json({ message: "Registration failed. Please try again." });
   }
 });
@@ -483,7 +517,7 @@ app.post("/api/auth/login", async (req, res) => {
 app.patch("/api/users/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const name = String(req.body.username || req.body.name || "").trim();
+    const name = normalizeUsername(req.body.username || req.body.name);
     const email = String(req.body.email || "").trim().toLowerCase();
     const phoneNumber = String(req.body.phone_number || req.body.phone || "").trim() || null;
     const oldPassword = String(req.body.oldPassword || req.body.old_password || "");
@@ -518,6 +552,15 @@ app.patch("/api/users/:id", async (req, res) => {
 
     if (existingEmail.length > 0) {
       return res.status(409).json({ message: "That email is already registered." });
+    }
+
+    const [existingUsername] = await db.query(
+      "SELECT id FROM users WHERE LOWER(name) = LOWER(?) AND id <> ? LIMIT 1",
+      [name, id]
+    );
+
+    if (existingUsername.length > 0) {
+      return res.status(409).json({ message: "That username is already taken." });
     }
 
     let nextPassword = null;
@@ -558,6 +601,9 @@ app.patch("/api/users/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Profile update error:", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "Username or email already registered." });
+    }
     res.status(500).json({ message: "Profile update failed. Please try again." });
   }
 });
