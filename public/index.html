@@ -29,155 +29,6 @@
   background-repeat: no-repeat;
   z-index: 0;
 }
-    
-    .hero-flowers {
-  display: none;
-    }
-    /* Decorative flowers using CSS shapes + SVG-like backgrounds */
-    .hero-flowers {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    /* Simulated flower vases via clip-path shapes */
-    .flower-group {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 62%;
-      height: 100%;
-      display: flex;
-      align-items: flex-end;
-      gap: 0;
-    }
-
-    /* Individual decorative stems */
-    .fstem {
-      position: absolute;
-      bottom: 0;
-      transform-origin: bottom center;
-    }
-
-    /* Vase 1 — amber glass */
-    .vase-amber {
-      left: 4%;
-      bottom: 0;
-    }
-    .vase-amber .vase-body {
-      width: 60px; height: 90px;
-      background: linear-gradient(160deg, #f4b942, #e08830, #c96c10);
-      border-radius: 50% 50% 40% 40% / 30% 30% 50% 50%;
-      margin: 0 auto;
-      position: relative;
-      box-shadow: inset -8px 0 20px rgba(0,0,0,0.15);
-    }
-
-    /* Vase 2 — purple glass */
-    .vase-purple {
-      left: 22%;
-      bottom: 0;
-    }
-    .vase-purple .vase-body {
-      width: 70px; height: 130px;
-      background: linear-gradient(160deg, #b585c0, #9060a8, #6e3b84);
-      border-radius: 45% 45% 35% 35% / 20% 20% 50% 50%;
-      position: relative;
-      box-shadow: inset -10px 0 24px rgba(0,0,0,0.2);
-    }
-
-    /* Vase 3 — clear glass */
-    .vase-clear {
-      left: 38%;
-      bottom: 0;
-    }
-    .vase-clear .vase-body {
-      width: 80px; height: 150px;
-      background: linear-gradient(160deg, rgba(220,200,230,0.7), rgba(180,160,200,0.5));
-      border-radius: 40% 40% 30% 30% / 15% 15% 45% 45%;
-      position: relative;
-      border: 1px solid rgba(255,255,255,0.4);
-      box-shadow: inset -12px 0 28px rgba(0,0,0,0.08);
-    }
-
-    /* Flower blooms */
-    .bloom {
-      position: absolute;
-      border-radius: 50%;
-    }
-
-    /* Pink rose cluster on amber vase */
-    .rose-cluster {
-      position: absolute;
-      bottom: 80px;
-      left: 0px;
-      width: 110px; height: 180px;
-    }
-    .rose-cluster .petal {
-      position: absolute;
-      border-radius: 50% 50% 50% 0;
-      transform-origin: bottom right;
-    }
-    .petal-1 { width:55px;height:55px; background:#e8a0b8; top:60px;left:10px; transform:rotate(-20deg); }
-    .petal-2 { width:60px;height:60px; background:#e090a8; top:30px;left:5px; transform:rotate(-50deg); }
-    .petal-3 { width:50px;height:50px; background:#d87898; top:50px;left:30px; transform:rotate(10deg); }
-    .petal-4 { width:45px;height:45px; background:#f0b0c0; top:20px;left:20px; transform:rotate(-80deg); }
-    .rose-center { position:absolute; width:28px;height:28px; background:#c06080; border-radius:50%; top:48px;left:22px; }
-
-    /* Pink gerbera on left */
-    .gerbera {
-      position: absolute;
-      bottom: 200px;
-      left: -15px;
-    }
-    .gerbera-petals {
-      position: relative;
-      width: 70px; height: 70px;
-    }
-    .gp { position:absolute; width:14px;height:30px; background:#e070a0; border-radius:50%; transform-origin: center bottom; left:28px; top:5px; }
-    .gp:nth-child(1){transform:rotate(0deg);} .gp:nth-child(2){transform:rotate(36deg);}
-    .gp:nth-child(3){transform:rotate(72deg);} .gp:nth-child(4){transform:rotate(108deg);}
-    .gp:nth-child(5){transform:rotate(144deg);} .gp:nth-child(6){transform:rotate(180deg);}
-    .gp:nth-child(7){transform:rotate(216deg);} .gp:nth-child(8){transform:rotate(252deg);}
-    .gp:nth-child(9){transform:rotate(288deg);} .gp:nth-child(10){transform:rotate(324deg);}
-    .gerbera-center { position:absolute; width:22px;height:22px; background:#c04070; border-radius:50%; top:24px;left:24px; z-index:1; }
-
-    /* Red alstroemeria */
-    .alstro-cluster {
-      position: absolute;
-      bottom: 120px;
-      left: 60px;
-      transform: rotate(-8deg);
-    }
-    .alstro-bloom {
-      position: relative;
-      width: 50px; height: 60px;
-      margin-bottom: -20px;
-    }
-    .ap { position:absolute; width:20px;height:32px; border-radius:50%; transform-origin:bottom center; }
-    .ap-1{background:#c84848;left:15px;top:0;transform:rotate(-30deg);}
-    .ap-2{background:#d06060;left:22px;top:5px;transform:rotate(20deg);}
-    .ap-3{background:#b83838;left:8px;top:5px;transform:rotate(-60deg);}
-    .ap-4{background:#c85858;left:20px;top:0;transform:rotate(50deg);}
-
-    /* Stem lines */
-    .stem-line {
-      position: absolute;
-      bottom: 0;
-      width: 3px;
-      background: #4a7a30;
-      border-radius: 2px;
-      transform-origin: bottom center;
-    }
-
-    /* Green leaves */
-    .leaf {
-      position: absolute;
-      width: 28px; height: 14px;
-      background: #5a8a38;
-      border-radius: 0 80% 0 80%;
-    }
 
     /* Hero text block */
     .hero-text {
@@ -281,10 +132,6 @@
       aspect-ratio: 0.92;
       position: relative;
       overflow: hidden;
-    }
-
-    .bottle-wrap {
-      display: none;
     }
 
     .define-brand-bg {
@@ -439,71 +286,6 @@
 <section class="hero">
   <div class="hero-bg"></div>
 
-  <!-- Decorative flower arrangement (CSS-drawn) -->
-  <div class="hero-flowers" aria-hidden="true">
-
-    <!-- Left pink gerbera -->
-    <div class="fstem gerbera" style="left:3%;bottom:0;">
-      <div class="stem-line" style="height:220px;left:32px;bottom:0;position:absolute;transform:rotate(5deg);"></div>
-      <div class="leaf" style="bottom:140px;left:36px;transform:rotate(-40deg);"></div>
-      <div class="gerbera-petals" style="position:relative;">
-        <div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div>
-        <div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div><div class="gp"></div>
-        <div class="gerbera-center"></div>
-      </div>
-    </div>
-
-    <!-- Rose cluster over amber vase -->
-    <div class="fstem vase-amber" style="left:6%;bottom:0;">
-      <div class="rose-cluster">
-        <div class="petal petal-1"></div>
-        <div class="petal petal-2"></div>
-        <div class="petal petal-3"></div>
-        <div class="petal petal-4"></div>
-        <div class="rose-center"></div>
-      </div>
-      <div class="stem-line" style="height:80px;left:28px;"></div>
-      <div class="vase-body"></div>
-    </div>
-
-    <!-- Alstroemeria over purple vase -->
-    <div class="fstem vase-purple" style="left:22%;">
-      <div style="position:absolute;bottom:130px;left:20px;">
-        <div class="alstro-bloom">
-          <div class="ap ap-1"></div><div class="ap ap-2"></div>
-          <div class="ap ap-3"></div><div class="ap ap-4"></div>
-        </div>
-        <div class="alstro-bloom" style="margin-top:15px;transform:rotate(20deg);">
-          <div class="ap ap-1"></div><div class="ap ap-2"></div>
-          <div class="ap ap-3"></div>
-        </div>
-      </div>
-      <div class="stem-line" style="height:130px;left:33px;transform:rotate(-4deg);"></div>
-      <div class="leaf" style="position:absolute;bottom:170px;left:36px;transform:rotate(-55deg);"></div>
-      <div class="vase-body"></div>
-    </div>
-
-    <!-- Clear vase with mixed blooms -->
-    <div class="fstem vase-clear" style="left:38%;">
-      <div style="position:absolute;bottom:150px;left:10px;">
-        <!-- Small pink blooms -->
-        <div style="position:relative;width:90px;height:120px;">
-          <div style="position:absolute;width:18px;height:18px;background:#f090b8;border-radius:50%;top:0;left:20px;"></div>
-          <div style="position:absolute;width:22px;height:22px;background:#e878a8;border-radius:50%;top:15px;left:45px;"></div>
-          <div style="position:absolute;width:16px;height:16px;background:#f0a0c0;border-radius:50%;top:5px;left:55px;"></div>
-          <div style="position:absolute;width:20px;height:20px;background:#e888b0;border-radius:50%;top:25px;left:10px;"></div>
-          <!-- green accent sprigs -->
-          <div style="position:absolute;width:2px;height:60px;background:#6a9848;bottom:0;left:38px;border-radius:2px;transform:rotate(-6deg);"></div>
-          <div style="position:absolute;width:2px;height:50px;background:#5a8838;bottom:0;left:50px;border-radius:2px;transform:rotate(10deg);"></div>
-          <div style="position:absolute;width:2px;height:70px;background:#6a9848;bottom:0;left:24px;border-radius:2px;transform:rotate(-15deg);"></div>
-        </div>
-      </div>
-      <div class="stem-line" style="height:150px;left:38px;transform:rotate(2deg);"></div>
-      <div class="vase-body"></div>
-    </div>
-
-  </div>
-
   <!-- Hero text -->
   <div class="hero-text">
     <div class="hero-eyebrow">New Collection 2025</div>
@@ -605,4 +387,3 @@
 </script>
 </body>
 </html>
-
