@@ -684,7 +684,7 @@
     <a href="shop.html">Shop</a>
     <a href="shop.html?sale=1">Sale</a>
   </div>
-  <a class="nav-logo" href="index.html">Scentique</a>
+  <a class="nav-logo" href="./">Scentique</a>
   <div class="nav-right">
     <button class="nav-search open-search" style="background:var(--pink-pale);border:1px solid var(--border);border-radius:20px;padding:6px 14px;color:var(--grey);display:flex;align-items:center;gap:8px;cursor:pointer;font-family:inherit;font-size:13px;">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -709,7 +709,7 @@
 
 <!-- BREADCRUMB -->
 <div class="breadcrumb">
-  <a href="index.html">Home</a> /
+  <a href="./">Home</a> /
   <a href="account.html">My Account</a> /
   <span>My Order</span>
 </div>
@@ -883,6 +883,110 @@ function itemStock(item) {
   return Number.isInteger(stock) ? stock : null;
 }
 
+function setCartItems(items) {
+  const normalizedItems = (items || []).map(item => ({
+    ...item,
+    id: item.id || item.product_id,
+    qty: Number(item.qty ?? item.quantity ?? 1),
+    quantity: Number(item.quantity ?? item.qty ?? 1),
+    price: Number(item.price || 0),
+    stock: Number(item.stock ?? 0),
+    img: item.img || item.image || ''
+  }));
+  localStorage.setItem('scentique_cart', JSON.stringify(normalizedItems));
+  Cart.syncBadge();
+}
+
+async function loadDatabaseCart() {
+  const user = getCustomerSession();
+  if (!user?.id) return;
+  const localItems = Cart.get();
+
+  try {
+    const response = await apiFetch(`/api/cart?user_id=${encodeURIComponent(user.id)}`);
+    if (!response.ok) throw new Error('Failed to load cart.');
+    const data = await response.json();
+    let databaseItems = data.items || [];
+
+    if (!databaseItems.length && localItems.length) {
+      for (const item of localItems) {
+        const productId = item.id || item.product_id;
+        const quantity = Number(item.qty ?? item.quantity ?? 1);
+        if (!productId || quantity <= 0) continue;
+
+        const addResponse = await apiFetch('/api/cart/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id, product_id: productId, quantity })
+        });
+        const addData = await addResponse.json().catch(() => ({}));
+        if (addResponse.ok) databaseItems = addData.items || databaseItems;
+      }
+    }
+
+    setCartItems(databaseItems);
+  } catch (error) {
+    // Keep existing local cart as fallback if the backend is unreachable.
+  }
+}
+
+async function updateDatabaseCartQuantity(id, quantity) {
+  const user = requireCustomerLogin('Please login first before updating your cart.');
+  if (!user) return false;
+
+  try {
+    const response = await apiFetch(`/api/cart/items/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: user.id, quantity })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to update cart.');
+    setCartItems(data.items || []);
+    return true;
+  } catch (error) {
+    Toast.show(error.message || 'Failed to update cart.', 'error');
+    return false;
+  }
+}
+
+async function removeDatabaseCartItem(id) {
+  const user = requireCustomerLogin('Please login first before updating your cart.');
+  if (!user) return false;
+
+  try {
+    const response = await apiFetch(`/api/cart/items/${encodeURIComponent(id)}?user_id=${encodeURIComponent(user.id)}`, {
+      method: 'DELETE'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to remove item.');
+    setCartItems(data.items || []);
+    return true;
+  } catch (error) {
+    Toast.show(error.message || 'Failed to remove item.', 'error');
+    return false;
+  }
+}
+
+async function clearDatabaseCart() {
+  const user = getCustomerSession();
+  if (!user?.id) {
+    Cart.save([]);
+    return;
+  }
+
+  try {
+    const response = await apiFetch(`/api/cart?user_id=${encodeURIComponent(user.id)}`, {
+      method: 'DELETE'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to clear cart.');
+    setCartItems(data.items || []);
+  } catch (error) {
+    Cart.save([]);
+  }
+}
+
 async function syncCartStock() {
   try {
     const response = await apiFetch('/api/products');
@@ -975,7 +1079,7 @@ function renderSummary() {
     <div class="summary-row total"><span>Total</span><span>RM${total}</span></div>`;
 }
 
-function changeQty(id, qty) {
+async function changeQty(id, qty) {
   const item = Cart.get().find(cartItem => String(cartItem.id) === String(id));
   const stock = item ? itemStock(item) : null;
 
@@ -984,12 +1088,14 @@ function changeQty(id, qty) {
     return;
   }
 
-  Cart.updateQty(id, qty);
+  const updated = await updateDatabaseCartQuantity(id, qty);
+  if (!updated) return;
   renderCart();
 }
 
-function removeItem(id) {
-  Cart.remove(id);
+async function removeItem(id) {
+  const removed = await removeDatabaseCartItem(id);
+  if (!removed) return;
   renderCart();
 }
 
@@ -1215,7 +1321,7 @@ async function placeOrder() {
   }
 
   // Clear cart and show success
-  Cart.save([]);
+  await clearDatabaseCart();
   appliedVoucher = null;
   discount = 0;
   paymentProofData = '';
@@ -1228,10 +1334,12 @@ async function placeOrder() {
   placeOrderBtn.textContent = 'Place Order';
 }
 
-stockSyncPromise = syncCartStock().finally(() => {
-  stockSyncPromise = null;
-  renderCart();
-});
+stockSyncPromise = loadDatabaseCart()
+  .then(syncCartStock)
+  .finally(() => {
+    stockSyncPromise = null;
+    renderCart();
+  });
 renderCart();
 </script>
 </body>
