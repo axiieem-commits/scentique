@@ -787,7 +787,7 @@
       <a href="shop.html?sale=1">Sale</a>
     </div>
 
-    <a href="index.html" class="nav-logo">Scentique</a>
+    <a href="./" class="nav-logo">Scentique</a>
 
     <div class="nav-right">
       <button class="nav-search" id="openSearch">
@@ -826,7 +826,7 @@
   <main class="shop-shell">
     <aside class="shop-sidebar" aria-label="Shop filters">
       <div class="breadcrumb">
-        <a href="index.html">Home</a>
+        <a href="./">Home</a>
         <span>/</span>
         <a href="shop.html" data-cat="all">All</a>
         <span>/</span>
@@ -950,6 +950,53 @@
         badge.textContent = count > 99 ? "99+" : count;
         badge.classList.toggle("show", count > 0);
       });
+    }
+
+    function setCartItems(items) {
+      const normalizedItems = (items || []).map(item => ({
+        ...item,
+        id: item.id || item.product_id,
+        qty: Number(item.qty ?? item.quantity ?? 1),
+        quantity: Number(item.quantity ?? item.qty ?? 1),
+        price: Number(item.price || 0),
+        stock: Number(item.stock ?? 0),
+        img: item.img || item.image || ""
+      }));
+      localStorage.setItem("scentique_cart", JSON.stringify(normalizedItems));
+      syncCartBadge();
+    }
+
+    async function loadDatabaseCart() {
+      const user = getCurrentUser();
+      if (!user?.id) return;
+      const localItems = JSON.parse(localStorage.getItem("scentique_cart") || "[]");
+
+      try {
+        const response = await apiFetch(`/api/cart?user_id=${encodeURIComponent(user.id)}`);
+        if (!response.ok) throw new Error("Failed to load cart.");
+        const data = await response.json();
+        let databaseItems = data.items || [];
+
+        if (!databaseItems.length && localItems.length) {
+          for (const item of localItems) {
+            const productId = item.id || item.product_id;
+            const quantity = Number(item.qty ?? item.quantity ?? 1);
+            if (!productId || quantity <= 0) continue;
+
+            const addResponse = await apiFetch("/api/cart/items", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: user.id, product_id: productId, quantity })
+            });
+            const addData = await addResponse.json().catch(() => ({}));
+            if (addResponse.ok) databaseItems = addData.items || databaseItems;
+          }
+        }
+
+        setCartItems(databaseItems);
+      } catch (error) {
+        syncCartBadge();
+      }
     }
 
     function getCurrentUser() {
@@ -1115,10 +1162,11 @@
       }).join("");
     }
 
-    function addToCart(id, button) {
+    async function addToCart(id, button) {
       if (!requireCustomerLogin()) return;
 
       const product = PRODUCTS.find(item => String(item.id) === String(id));
+      const user = getCurrentUser();
 
       if (!product) {
         alert("Product not found.");
@@ -1136,8 +1184,7 @@
         return;
       }
 
-      let cart = JSON.parse(localStorage.getItem("scentique_cart")) || [];
-
+      const cart = JSON.parse(localStorage.getItem("scentique_cart")) || [];
       const existing = cart.find(item => String(item.id) === String(id));
       const currentQty = existing ? Number(existing.qty || existing.quantity || 0) : 0;
 
@@ -1146,26 +1193,23 @@
         return;
       }
 
-      if (existing) {
-        existing.qty = Number(existing.qty || existing.quantity || 0) + 1;
-        existing.quantity = existing.qty;
-        existing.price = productSalePrice(product);
-        existing.stock = stock;
-      } else {
-        cart.push({
-          id: product.id,
-          name: product.name,
-          type: product.type,
-          price: productSalePrice(product),
-          img: product.image,
-          stock,
-          qty: 1,
-          quantity: 1
+      try {
+        const response = await apiFetch("/api/cart/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            product_id: product.id,
+            quantity: 1
+          })
         });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || "Failed to add item to cart.");
+        setCartItems(data.items || []);
+      } catch (error) {
+        alert(error.message || "Failed to add item to cart.");
+        return;
       }
-
-      localStorage.setItem("scentique_cart", JSON.stringify(cart));
-      syncCartBadge();
 
       button.textContent = "Added ✓";
 
@@ -1263,6 +1307,7 @@
     });
 
     loadProducts();
+    loadDatabaseCart();
     syncCartBadge();
   </script>
 
