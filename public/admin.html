@@ -1098,7 +1098,7 @@
   <header class="admin-header">
     <nav class="admin-links empty" aria-label="Admin navigation"></nav>
 
-    <a class="admin-logo" href="index.html">Scentique</a>
+    <a class="admin-logo" href="./">Scentique</a>
 
     <div class="admin-actions hidden" id="adminActions">
       <label class="admin-search">
@@ -1421,7 +1421,7 @@
                 </div>
               </div>
               <div class="total-line">
-                <span>Shipping Fee</span>
+                <span>Final Total</span>
                 <strong id="detailWithShipping">RM267</strong>
               </div>
               <div class="total-line">
@@ -1827,6 +1827,9 @@
           trackingNumber: order.tracking_number || "",
           paymentProof: order.payment_proof || "",
           paymentStatus: order.payment_status || "Pending",
+          total: Number(order.total_amount || 0),
+          voucherCode: order.voucher_code || "",
+          voucherDiscountPercentage: Number(order.voucher_discount_percentage || 0),
           items: (order.items || []).map(item => ({
             id: item.product_id,
             name: item.product_name,
@@ -1853,7 +1856,19 @@
     }
 
     function formatMoney(value) {
-      return `RM${Number(value || 0).toLocaleString("en-MY")}`;
+      return `RM${Number(value || 0).toLocaleString("en-MY", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+    }
+
+    function orderTotal(order) {
+      const savedTotal = Number(order?.total);
+      if (Number.isFinite(savedTotal) && savedTotal >= 0) return savedTotal;
+
+      return (order?.items || []).reduce((sum, item) => {
+        return sum + Number(item.price || 0) * Number(item.qty || item.quantity || 0);
+      }, 0);
     }
 
     async function loadVouchers() {
@@ -2065,11 +2080,7 @@
 
     function renderDashboard() {
       const orders = getOrders();
-      const revenue = orders.reduce((sum, order) => {
-        return sum + (order.items || []).reduce((itemSum, item) => {
-          return itemSum + Number(item.price || 0) * Number(item.qty || item.quantity || 0);
-        }, 0);
-      }, 0);
+      const revenue = orders.reduce((sum, order) => sum + orderTotal(order), 0);
       const pending = orders.filter(order => !["Shipped", "Delivered"].includes(order.status)).length;
       document.getElementById("metricRevenue").textContent = formatMoney(revenue);
       document.getElementById("metricCustomers").textContent = new Set(orders.map(order => order.customer).filter(Boolean)).size;
@@ -2093,7 +2104,7 @@
       }
 
       ordersList.innerHTML = orders.map(order => {
-        const total = order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const total = orderTotal(order);
         const statusClass = statusClassName(order.status);
         return `
           <div class="order-row">
@@ -2131,7 +2142,7 @@
       }
 
       paymentApprovalList.innerHTML = payments.map(order => {
-        const total = order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const total = orderTotal(order);
         const itemCount = order.items.reduce((sum, item) => sum + item.qty, 0);
         return `
           <article class="payment-card">
@@ -2142,6 +2153,7 @@
               <div class="payment-meta">
                 <span class="payment-pill">${order.paymentStatus === "Rejected" ? "Payment rejected" : "Pending approval"}</span>
                 <span class="payment-pill receipt">${order.paymentProof ? "Receipt uploaded" : "No receipt yet"}</span>
+                ${order.voucherCode ? `<span class="payment-pill receipt">Voucher ${order.voucherCode} (${order.voucherDiscountPercentage}% off)</span>` : ""}
               </div>
             </div>
             <div class="payment-card-actions">
@@ -2184,7 +2196,7 @@
       }
       const productTotal = order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
       const shipping = productTotal > 150 ? 0 : 8;
-      const subtotal = productTotal + shipping;
+      const total = orderTotal(order);
 
       document.getElementById("detailOrderId").textContent = `Order Id : #${order.id}`;
       document.getElementById("detailName").value = order.customer || "";
@@ -2200,7 +2212,7 @@
       document.getElementById("detailProductTotal").textContent = formatMoney(productTotal);
       document.getElementById("detailQty").textContent = `x ${order.items.reduce((sum, item) => sum + item.qty, 0)}`;
       document.getElementById("detailShipping").textContent = formatMoney(shipping);
-      document.getElementById("detailWithShipping").textContent = formatMoney(subtotal);
+      document.getElementById("detailWithShipping").textContent = formatMoney(total);
       document.getElementById("detailSubtotal").textContent = order.paid ? "PAID" : "UNPAID";
       showPanel("detail");
     }
