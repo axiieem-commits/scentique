@@ -1354,9 +1354,12 @@ app.get("/api/orders", async (req, res) => {
     const [orders] = await db.query(`
       SELECT
         orders.*,
+        vouchers.voucher_code,
+        vouchers.discount_percentage AS voucher_discount_percentage,
         payments.payment_proof,
         payments.payment_status
       FROM orders
+      LEFT JOIN vouchers ON vouchers.voucher_id = orders.voucher_id
       LEFT JOIN payments ON payments.order_id = orders.order_id
       ${orderWhere}
       ORDER BY orders.order_date DESC
