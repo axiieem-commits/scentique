@@ -840,6 +840,14 @@ let paymentProofLoading = false;
 let orderSubmitting = false;
 let stockSyncPromise = null;
 
+function roundMoney(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function formatMoney(value) {
+  return `RM${roundMoney(value).toFixed(2)}`;
+}
+
 function getApiUrl(path) {
   return window.location.protocol === 'file:' ? `http://127.0.0.1:3000${path}` : path;
 }
@@ -1046,13 +1054,13 @@ function renderCart() {
               <div class="cart-item-type">${item.type}</div>
             </div>
           </div>
-          <div class="cart-price">RM${item.price}</div>
+          <div class="cart-price">${formatMoney(item.price)}</div>
           <div class="qty-stepper">
             <button class="qty-btn" onclick="changeQty('${item.id}', ${item.qty - 1})">−</button>
             <span class="qty-num">${item.qty}</span>
             <button class="qty-btn" onclick="changeQty('${item.id}', ${item.qty + 1})">+</button>
           </div>
-          <div class="cart-total-cell">RM${item.price * item.qty}</div>
+          <div class="cart-total-cell">${formatMoney(item.price * item.qty)}</div>
           <button class="remove-btn" onclick="removeItem('${item.id}')" title="Remove">✕</button>
         </div>
       `).join('')}
@@ -1072,11 +1080,11 @@ function renderSummary() {
     ${items.map(i => `
       <div class="summary-row">
         <span>${i.name} × ${i.qty}</span>
-        <span>RM${i.price * i.qty}</span>
+        <span>${formatMoney(i.price * i.qty)}</span>
       </div>`).join('')}
-    ${discount > 0 ? `<div class="summary-row" style="color:#2e7d4a;"><span>Voucher Discount</span><span>−RM${discountAmt}</span></div>` : ''}
-    <div class="summary-row"><span>Shipping Fee</span><span>${shipping === 0 ? 'Free' : 'RM' + shipping}</span></div>
-    <div class="summary-row total"><span>Total</span><span>RM${total}</span></div>`;
+    ${discount > 0 ? `<div class="summary-row" style="color:#2e7d4a;"><span>Voucher Discount</span><span>−${formatMoney(discountAmt)}</span></div>` : ''}
+    <div class="summary-row"><span>Shipping Fee</span><span>${shipping === 0 ? 'Free' : formatMoney(shipping)}</span></div>
+    <div class="summary-row total"><span>Total</span><span>${formatMoney(total)}</span></div>`;
 }
 
 async function changeQty(id, qty) {
@@ -1173,11 +1181,11 @@ async function openCheckout() {
     ${items.map(i => `
       <div class="checkout-order-row">
         <span>${i.name} × ${i.qty}</span>
-        <span>RM${i.price * i.qty}</span>
+        <span>${formatMoney(i.price * i.qty)}</span>
       </div>`).join('')}
-    ${discount > 0 ? `<div class="checkout-order-row" style="color:#2e7d4a;"><span>Discount</span><span>−RM${discountAmt}</span></div>` : ''}
-    <div class="checkout-order-row"><span>Shipping Fee</span><span>${shipping === 0 ? 'Free' : 'RM' + shipping}</span></div>
-    <div class="checkout-order-row total-row"><span>Subtotal</span><span>RM${total}</span></div>`;
+    ${discount > 0 ? `<div class="checkout-order-row" style="color:#2e7d4a;"><span>Discount</span><span>−${formatMoney(discountAmt)}</span></div>` : ''}
+    <div class="checkout-order-row"><span>Shipping Fee</span><span>${shipping === 0 ? 'Free' : formatMoney(shipping)}</span></div>
+    <div class="checkout-order-row total-row"><span>Subtotal</span><span>${formatMoney(total)}</span></div>`;
 
   if (user.username) document.getElementById('shipName').value = user.username;
   if (user.phone) document.getElementById('shipPhone').value = user.phone;
@@ -1291,7 +1299,7 @@ async function placeOrder() {
         postcode,
         city,
         state,
-        total_amount: total,
+        total_amount: roundMoney(total),
         voucher_code: appliedVoucher?.voucher_code || null,
         paid: false,
         payment_proof: paymentProofData,
